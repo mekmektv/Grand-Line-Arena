@@ -11,14 +11,22 @@ simple, éviter le jargon non nécessaire, et ne jamais supposer qu'il saura cor
 
 ## 🔴 Pièges déjà payés — ne pas les repayer
 
-**Le typecheck du front, c'est `tsc -b`, jamais `tsc --noEmit -p tsconfig.json`.**
-`web/tsconfig.json` contient `"files": []` et ne fait que référencer `tsconfig.app.json` :
-la commande avec `-p` ne vérifie donc **rien du tout** et sort en succès. Une session entière
-a annoncé « ça compile » à tort avant de s'en apercevoir.
+**Il y a DEUX typechecks, et longtemps un seul existait.**
+Le front se vérifie avec `tsc -b` (jamais `tsc --noEmit -p tsconfig.json` : `web/tsconfig.json`
+contient `"files": []` et ne référence que `tsconfig.app.json`, donc `-p` ne vérifie **rien**
+et sort en succès). Le serveur, lui, n'avait **aucun** tsconfig jusqu'au 22/07/2026 : il n'a
+jamais été typé de tout le projet, et le déploiement Vercel a révélé une centaine d'erreurs
+dormantes d'un coup.
 
 ```bash
-cd web && npx tsc -b --force && npx oxlint src
+npm run typecheck        # serveur + api  (tsconfig.json racine)
+npm run typecheck:web    # front
+cd web && npx oxlint src
 ```
+
+`allowImportingTsExtensions` est **obligatoire** dans le tsconfig racine : le serveur s'exécute
+en TypeScript direct (`node src/server.ts`), donc Node exige l'extension `.ts` dans les imports,
+ce que TypeScript refuse sans cette option (erreur TS5097).
 
 **Le serveur Node ne recharge PAS à chaud.** Après toute modification dans `server/src/`, il
 faut le redémarrer, sinon l'API sert encore l'ancien code (symptôme typique : le front est à
@@ -32,6 +40,19 @@ jamais un bug — vérifier `document.hidden` avant de chercher plus loin.
 **Ne pas éditer un fichier pendant qu'une animation le fait tourner.** Le rechargement à chaud
 remonte le composant : la logique continue sur l'ancienne instance et l'affichage se fige.
 Recharger la page après édition avant de conclure quoi que ce soit.
+
+**Déploiement Vercel — quatre pièges payés en une session.** Voir `DEPLOIEMENT.md`.
+1. **`functions.includeFiles` est indispensable.** Vercel n'embarque PAS `server/src/` dans le
+   paquet de la fonction sous prétexte qu'il est importé : sans ce réglage, la fonction plante
+   au chargement avec un `FUNCTION_INVOCATION_FAILED` **sans aucun message**. C'était la cause
+   racine de tous les échecs.
+2. **Les fichiers « attrape-tout » ne marchent pas.** `[[...x]].ts` n'est pas reconnu, et
+   `[...x].ts` ne capture qu'**un seul niveau** — `/api/etat` passait, `/api/auth/dev/login`
+   renvoyait un 404 de Vercel. D'où la règle explicite dans `vercel.json`.
+3. **Un déploiement `Ready` (vert) peut contenir 100 erreurs TypeScript** et servir une
+   fonction cassée. Le statut vert ne prouve rien : lire les logs de build.
+4. **`import.meta.url` n'a pas la forme attendue** dans le paquet compilé — `load-env.ts` ne
+   s'exécute donc plus que hors plateforme (test sur `process.env.VERCEL`).
 
 **Les captures d'écran calent souvent** (le canvas de combat tourne en boucle). Préférer
 `get_page_text`, `read_page`, ou du JS qui échantillonne le DOM et stocke dans `window.__x`,
@@ -127,8 +148,10 @@ matchmaking anti-frustration, recyclage, **quêtes** (jour + semaine + succès d
 2. **`DEV_AUTH_ENABLED=true`** — `/auth/dev/login?pseudo=X` crée une session sans aucune
    vérification. En production, n'importe qui se fabrique des comptes. L'app Twitch est créée et
    le vrai login marche (21/07) : il ne reste qu'à passer ce drapeau à `false` au déploiement.
-3. **Rien n'est déployé** — tout tourne en local. Cible prévue : Vercel (front) + Railway (back).
-   Recommandation donnée : déployer *avant* la Brique 6, pas après.
+3. ~~Rien n'est déployé~~ → **en ligne le 22/07** sur <https://grand-line-arena.vercel.app>.
+   Front ET API sur le même domaine Vercel (le front à la racine, l'API sous `/api`) : c'est ce
+   qui évite le CORS et le cookie refusé entre deux domaines. `DEV_AUTH_ENABLED=false` en
+   production, vérifié (la route de dev répond 404). Chaque `git push` redéploie.
 
 **Ensuite :** Brique 6 (EventSub Twitch, présence → Berrys, points de chaîne, roll premium,
 annonce des tirages Épiques dans le chat).
