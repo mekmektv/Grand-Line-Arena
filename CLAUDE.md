@@ -107,6 +107,8 @@ Utilitaires de base (lisent/écrivent vraiment) :
 node server/scripts/verif-colonnes.ts                # colonnes présentes + liste des joueurs
 node server/scripts/etat-compte.ts <twitch_id>       # inventaire d'un compte
 node server/scripts/supprimer-compte.ts <twitch_id>  # remet un compte à zéro pour retester
+node server/scripts/crediter-coffre-premium.ts <twitch_id> <n>  # Brique 6 : teste sans vraie redemption
+node server/scripts/crediter-presence.ts <twitch_id> <montant>  # Brique 6 : teste le rond sans vrai live
 ```
 
 ---

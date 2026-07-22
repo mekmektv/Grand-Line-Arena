@@ -56,6 +56,9 @@ d'origine dans le paramètre `chemin`, que `api/index.ts` recombine avec la requ
 | `FRONTEND_URL` | `https://grand-line-arena.vercel.app` — **sans slash final** |
 | `TWITCH_REDIRECT_URI` | `https://grand-line-arena.vercel.app/api/auth/twitch/callback` |
 | `DEV_AUTH_ENABLED` | **`false`** |
+| `TWITCH_STREAMER_SECRET` | 🔒 secret — protège `/api/auth/twitch/streamer/login` (Brique 6) |
+| `TWITCH_EVENTSUB_SECRET` | 🔒 secret — vérifie les notifications webhook EventSub (Brique 6), même valeur que dans `server/.env` local (le script `config-eventsub-twitch.ts` la lit pour créer les abonnements) |
+| `CRON_SECRET` | 🔒 secret — protège `/api/cron/presence` (Brique 6), appelée par cron-job.org |
 
 Après toute modification : **Redeploy**. Les variables ne sont lues qu'au déploiement suivant.
 
@@ -129,3 +132,24 @@ fonction meurt **au chargement du module**, avant d'atteindre la base.
 
 Les scripts de `server/scripts/` (validations, simulations, utilitaires de compte) tournent sur
 la machine avec `server/.env`. Ils ne sont pas déployés et n'ont pas à l'être.
+
+---
+
+## Brique 6 (Twitch en live) — mise en route une seule fois
+
+Après un déploiement qui touche `server/src/twitch-*.ts` ou change de chaîne Twitch :
+
+1. Coller `supabase/A_APPLIQUER_twitch.sql` si de nouvelles colonnes/tables ont été ajoutées.
+2. Visiter `https://.../api/auth/twitch/streamer/login?cle=TWITCH_STREAMER_SECRET` (connecté
+   avec le compte Twitch du streamer) — enregistre le jeton broadcaster en base.
+3. `node server/scripts/config-eventsub-twitch.ts https://.../api` — crée la récompense
+   "Tirage premium" et les abonnements EventSub. Rejouable sans risque (idempotent).
+4. Vérifier que le cron externe (cron-job.org) appelle bien `GET /api/cron/presence?cle=...`
+   toutes les 1 min.
+
+Utilitaires de test (créditent directement en base, sans passer par une vraie redemption
+Twitch) :
+```bash
+node server/scripts/crediter-coffre-premium.ts <twitch_id> <quantite>
+node server/scripts/crediter-presence.ts <twitch_id> <montant>
+```
