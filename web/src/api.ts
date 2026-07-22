@@ -1,7 +1,11 @@
 // ONE PIECE ARENA — client HTTP vers le backend (server/). Le cookie de session part tout
 // seul avec `credentials: 'include'` : pas de token à gérer côté front.
 
-const API_URL = import.meta.env.VITE_API_URL as string;
+// En production, front et API sont servis par le même domaine Vercel : l'API vit sous /api,
+// une adresse relative suffit donc et il n'y a AUCUNE variable à configurer côté hébergeur —
+// une variable oubliée ou mal recopiée est la première cause de « ça marche en local, pas en
+// ligne ». En local, web/.env pointe vers http://localhost:8787, l'API ayant son propre port.
+const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 export interface PersoActif {
   collection_id: number;

@@ -1,99 +1,106 @@
 # Déploiement — One Piece Arena
 
-Front sur **Vercel**, API sur **Railway**, base sur **Supabase** (déjà en ligne, rien à faire).
+**Tout sur Vercel** (front + API), base sur **Supabase** (déjà en ligne, rien à faire).
 
-L'ordre compte : l'API d'abord, parce que le front a besoin de connaître son URL, et Twitch a
-besoin de connaître celle de l'API.
-
----
-
-## Le piège à connaître avant de commencer
-
-Front et API seront sur **deux domaines différents** (`*.vercel.app` et `*.up.railway.app`).
-Trois réglages en dépendent, et si l'un des trois est faux **la connexion échoue en silence** :
-le joueur passe par Twitch avec succès, revient sur le site… et reste « non connecté ».
-
-| Réglage | Où | Doit valoir |
-|---|---|---|
-| `FRONTEND_URL` | Railway | l'URL Vercel **exacte**, en `https://`, **sans slash final** |
-| `TWITCH_REDIRECT_URI` | Railway **et** console Twitch | la même chaîne des deux côtés, au caractère près |
-| `VITE_API_URL` | Vercel | l'URL Railway, en `https://`, sans slash final |
-
-`FRONTEND_URL` ne sert pas qu'aux redirections : le serveur s'en sert pour décider d'envoyer
-le cookie de session en `SameSite=None; Secure` (obligatoire entre deux domaines) plutôt qu'en
-`SameSite=Lax`. S'il reste sur `http://localhost:5173`, le cookie ne partira jamais.
+Front et API partagent le **même domaine** : le site à la racine, l'API sous `/api`. Ce n'est
+pas un détail d'organisation — c'est ce qui évite les deux pièges classiques du déploiement en
+deux morceaux : le CORS, et surtout le cookie de session qu'un navigateur refuse d'envoyer
+entre deux domaines différents.
 
 ---
 
-## 1. L'API sur Railway
+## Comment c'est branché
 
-**Réglage du service**
+| Fichier | Rôle |
+|---|---|
+| `vercel.json` | construit le front (`web/`) et publie `web/dist` |
+| `api/[[...chemin]].ts` | attrape toute requête `/api/…`, retire le préfixe, délègue au routeur |
+| `server/src/server.ts` | le routeur, **partagé** entre le serveur local et la fonction Vercel |
 
-- Racine du projet (*Root Directory*) : `server`
-- Commande de démarrage : `npm start` (fournie par `server/package.json`)
-- Node **24 minimum** — le serveur exécute du TypeScript directement, sans étape de build.
-  C'est le rôle du champ `engines` de `server/package.json`.
+`server/src/server.ts` ne démarre un vrai serveur que **hors** Vercel (test sur
+`process.env.VERCEL`). Sur Vercel, il est seulement importé : rien n'écoute de port.
 
-**Variables d'environnement à créer** (Railway → Variables)
+Le front n'a **aucune variable à configurer** : sans `VITE_API_URL`, il appelle `/api`,
+c'est-à-dire lui-même. Une variable de moins à oublier ou à mal recopier.
+
+---
+
+## 1. Importer le projet
+
+<https://vercel.com> → **Add New → Project** → **Import Git Repository** → `Grand-Line-Arena`.
+
+Laisse les réglages de build tels quels : `vercel.json` s'en charge. Ne renseigne **pas** de
+« Root Directory », il doit rester la racine du dépôt (l'API est dans `api/`, le front dans
+`web/` : Vercel a besoin de voir les deux).
+
+Le premier déploiement va réussir mais l'application **ne fonctionnera pas encore** : les
+variables d'environnement manquent. C'est normal, on les ajoute juste après.
+
+---
+
+## 2. Les variables d'environnement
+
+**Settings → Environment Variables.** Recopie les quatre premières depuis ton `server/.env`
+local (ouvre-le avec le Bloc-notes).
 
 | Variable | Valeur |
 |---|---|
-| `SUPABASE_URL` | identique à ton `server/.env` local |
-| `SUPABASE_SERVICE_ROLE_KEY` | identique — ⚠️ secret, ne jamais mettre côté front |
-| `SESSION_SECRET` | **génère-en un nouveau**, différent du local |
+| `SUPABASE_URL` | identique au local |
+| `SUPABASE_SERVICE_ROLE_KEY` | identique — ⚠️ secret |
 | `TWITCH_CLIENT_ID` | identique |
 | `TWITCH_CLIENT_SECRET` | identique — ⚠️ secret |
-| `TWITCH_REDIRECT_URI` | `https://<ton-api>.up.railway.app/auth/twitch/callback` |
-| `FRONTEND_URL` | `https://<ton-front>.vercel.app` |
-| `DEV_AUTH_ENABLED` | **`false`** — voir plus bas |
-| `PORT` | *ne pas créer*, Railway l'injecte |
+| `SESSION_SECRET` | **un nouveau**, différent du local |
+| `FRONTEND_URL` | `https://<ton-projet>.vercel.app` — **sans slash final** |
+| `TWITCH_REDIRECT_URI` | `https://<ton-projet>.vercel.app/api/auth/twitch/callback` |
+| `DEV_AUTH_ENABLED` | **`false`** |
+
+Puis **Redeploy** : les variables ne sont lues qu'au déploiement suivant.
 
 ⚠️ **`DEV_AUTH_ENABLED=false` n'est pas optionnel.** Laissé à `true`, la route
-`/auth/dev/login?pseudo=X` crée un compte pour n'importe qui, sans aucune vérification : on se
-fabrique autant d'identités que voulu, et le classement n'a plus de sens.
+`/api/auth/dev/login?pseudo=X` crée un compte pour n'importe qui sans aucune vérification : on
+se fabrique autant d'identités qu'on veut, et le classement perd tout sens.
 
----
-
-## 2. Le front sur Vercel
-
-- Racine du projet (*Root Directory*) : `web`
-- Framework : Vite (détecté tout seul) · build `npm run build` · sortie `dist`
-- Variable d'environnement : `VITE_API_URL` = `https://<ton-api>.up.railway.app`
-
-⚠️ Une variable `VITE_*` est **lue au moment du build**, pas au démarrage. La modifier oblige à
-**redéployer** le front — sinon l'ancienne valeur reste figée dans le JavaScript livré.
-
-Et tout ce qui est préfixé `VITE_` finit **en clair dans le navigateur** : jamais de secret ici.
+⚠️ **Ne crée jamais de variable commençant par `VITE_` contenant un secret.** Tout ce qui porte
+ce préfixe est intégré au JavaScript envoyé au navigateur, donc lisible par tous.
 
 ---
 
 ## 3. Twitch
 
-Dans <https://dev.twitch.tv/console/apps>, sur ton application, **ajouter** (sans retirer celle
-de localhost, qui sert à continuer à développer) :
+Dans <https://dev.twitch.tv/console/apps>, sur ton application → **Manage** → **OAuth Redirect
+URLs** → **Add** (garde celle de localhost, elle sert à continuer à développer) :
 
 ```
-https://<ton-api>.up.railway.app/auth/twitch/callback
+https://<ton-projet>.vercel.app/api/auth/twitch/callback
 ```
+
+Elle doit être **identique au caractère près** à `TWITCH_REDIRECT_URI`. La moindre différence
+— un slash en trop, `http` au lieu de `https` — donne une erreur `redirect_mismatch`.
 
 ---
 
-## 4. Vérifier que ça marche
+## 4. Vérifier, dans cet ordre
 
-Dans cet ordre — chaque étape confirme la précédente :
+Chaque étape confirme la précédente. Ne passe à la suivante que si celle d'avant est verte.
 
-1. `https://<ton-api>.up.railway.app/etat` → doit répondre **401** (« non connecté »).
-   Une autre erreur = l'API ne démarre pas, lire les logs Railway.
-2. Ouvrir le front, cliquer **Se connecter avec Twitch** → l'écran Twitch doit apparaître.
-   Une erreur `redirect_mismatch` = l'URL de l'étape 3 ne correspond pas exactement.
-3. Après autorisation, tu dois revenir **connecté**. Si tu reviens déconnecté, c'est le cookie :
-   vérifier que `FRONTEND_URL` est bien en `https://` et sans slash final.
-4. `https://<ton-api>.up.railway.app/auth/dev/login?pseudo=Test` → doit répondre **404**.
-   S'il te connecte, `DEV_AUTH_ENABLED` n'est pas à `false`.
+1. `https://<ton-projet>.vercel.app/api/etat` → doit répondre **401** (« non connecté »).
+   Autre chose = la fonction ne démarre pas : voir les logs dans Vercel → Deployments → Runtime Logs.
+2. Ouvrir le site → l'écran de connexion doit s'afficher.
+3. **Se connecter avec Twitch** → l'écran d'autorisation Twitch apparaît.
+   `redirect_mismatch` ici = l'URL de l'étape 3 ne correspond pas.
+4. Après autorisation, tu dois revenir **connecté**. Si tu reviens déconnecté, c'est le cookie :
+   vérifier que `FRONTEND_URL` est en `https://` et sans slash final.
+5. `https://<ton-projet>.vercel.app/api/auth/dev/login?pseudo=Test` → doit répondre **404**.
+   S'il te connecte, `DEV_AUTH_ENABLED` n'est pas à `false` (ou le redéploiement manque).
 
 ---
+
+## Ensuite : chaque `git push` redéploie tout seul
+
+Plus rien à faire à la main. Une modification poussée sur `main` déclenche un nouveau
+déploiement.
 
 ## Ce qui reste local
 
-Les scripts de `server/scripts/` (validations, simulations, utilitaires de compte) continuent de
-tourner sur ta machine avec `server/.env`. Ils ne sont pas déployés et n'ont pas à l'être.
+Les scripts de `server/scripts/` (validations, simulations, utilitaires de compte) tournent sur
+ta machine avec `server/.env`. Ils ne sont pas déployés et n'ont pas à l'être.

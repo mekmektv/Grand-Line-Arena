@@ -25,7 +25,7 @@
 // Lancer :  node server/src/server.ts   (après avoir rempli server/.env, voir README)
 
 import './load-env.ts';
-import { createServer, type IncomingMessage } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { env, verifierEnvAuDemarrage } from './env.ts';
 import {
@@ -62,21 +62,32 @@ const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const TWITCH_USERS_URL = 'https://api.twitch.tv/helix/users';
 
 function cookieAttributs(maxAgeSecondes: number): string {
-  // ⚠️ En production, le front (Vercel) et l'API (Railway) sont sur deux domaines DIFFÉRENTS :
-  // toute requête du front vers l'API est donc "cross-site". Or SameSite=Lax interdit au
-  // navigateur d'envoyer le cookie dans ce cas — le joueur se connectait via Twitch avec
-  // succès, puis restait "non connecté" en boucle, sans la moindre erreur pour l'expliquer.
-  // SameSite=None lève l'interdiction, mais les navigateurs l'exigent accompagné de Secure
-  // (donc https) : les deux vont ensemble, jamais l'un sans l'autre.
+  // Front et API sont servis par le MÊME domaine Vercel (le front à la racine, l'API sous
+  // /api) : SameSite=Lax suffirait donc en production. On garde quand même None+Secure, qui
+  // fonctionne dans les deux cas, pour que déplacer un jour l'API sur un autre domaine ne
+  // rouvre pas le piège suivant — découvert en préparant le déploiement :
   //
-  // En local, front et API sont tous deux en http://localhost : même site, et Secure y est
-  // refusé faute d'https. On garde donc Lax, qui est aussi le choix le plus sûr.
+  //   entre deux domaines, SameSite=Lax interdit au navigateur d'envoyer le cookie. Le joueur
+  //   passait par Twitch avec succès, revenait… et restait « non connecté », en boucle et sans
+  //   la moindre erreur pour l'expliquer.
+  //
+  // Les navigateurs exigent Secure dès qu'on met None : les deux vont ensemble, jamais l'un
+  // sans l'autre. En local (http://localhost) Secure est refusé, d'où le Lax de repli.
   const enProduction = env.frontendUrl.startsWith('https://');
   const politique = enProduction ? 'SameSite=None; Secure' : 'SameSite=Lax';
   return `Path=/; HttpOnly; ${politique}; Max-Age=${maxAgeSecondes}`;
 }
 
-const serveur = createServer(async (req, res) => {
+/**
+ * Le routeur complet, extrait de createServer pour pouvoir servir DEUX contextes avec
+ * exactement le même code (aucune duplication, donc aucune dérive possible entre les deux) :
+ *   · en local, un vrai serveur node:http — voir le bas de ce fichier ;
+ *   · en production, une fonction Vercel — voir api/[[...chemin]].ts.
+ *
+ * La signature (req, res) de node:http est précisément celle qu'attend une fonction Vercel :
+ * il n'y a rien à réécrire, juste à exporter.
+ */
+export async function gererRequete(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
   const cookies = parserCookies(req.headers.cookie);
 
@@ -438,9 +449,14 @@ const serveur = createServer(async (req, res) => {
     console.error(e);
     res.writeHead(500).end(`Erreur serveur : ${(e as Error).message}`);
   }
-});
+}
 
-serveur.listen(env.port, () => {
-  console.log(`One Piece Arena — serveur d'auth Twitch sur http://localhost:${env.port}`);
-  console.log(`  → connexion : http://localhost:${env.port}/auth/twitch/login`);
-});
+// Démarrage LOCAL uniquement. Sur Vercel, ce fichier n'est jamais exécuté directement :
+// c'est api/[[...chemin]].ts qui importe `gererRequete` — donc rien n'écoute de port, et ce
+// bloc est ignoré.
+if (process.env.VERCEL === undefined) {
+  createServer(gererRequete).listen(env.port, () => {
+    console.log(`One Piece Arena — serveur d'auth Twitch sur http://localhost:${env.port}`);
+    console.log(`  → connexion : http://localhost:${env.port}/auth/twitch/login`);
+  });
+}
