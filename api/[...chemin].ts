@@ -12,30 +12,19 @@
 // locale, et on déboguerait un comportement impossible à reproduire sur sa machine.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+// ⚠️ Import STATIQUE, obligatoirement. Une version précédente l'importait dynamiquement, pour
+// pouvoir rapporter proprement une erreur de démarrage : Vercel n'embarque alors PAS
+// server.ts dans le paquet de la fonction, et l'exécution échouait sur
+// « Cannot find module /var/task/server/src/server.ts ». C'est l'import statique qui indique
+// au constructeur quels fichiers embarquer.
+//
+// La lisibilité des erreurs est traitée autrement : server.ts ne vérifie plus ses variables
+// d'environnement au chargement (ça plantait avant tout code à nous, d'où le
+// « FUNCTION_INVOCATION_FAILED » muet de Vercel). Une variable absente remonte maintenant à la
+// première requête qui la lit, et le try/catch de gererRequete en renvoie le message en clair.
+import { gererRequete } from '../server/src/server.ts';
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  // Import DYNAMIQUE, et pas en haut du fichier : server.ts vérifie ses variables
-  // d'environnement dès son chargement et refuse de démarrer s'il en manque une (c'est voulu,
-  // voir env.ts). Avec un import statique, cette erreur survient AVANT que notre code ne
-  // s'exécute : Vercel ne peut alors afficher qu'un « FUNCTION_INVOCATION_FAILED » opaque, qui
-  // ne dit ni quelle variable manque, ni même que le problème vient de là.
-  // En important ici, on récupère le message et on le renvoie tel quel au navigateur.
-  let gererRequete: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
-  try {
-    ({ gererRequete } = await import('../server/src/server.ts'));
-  } catch (e) {
-    console.error('Démarrage de l\'API impossible :', e);
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.writeHead(500).end(
-      'L\'API n\'a pas pu démarrer.\n\n'
-      + `${(e as Error).message}\n\n`
-      + 'Si le message ci-dessus parle d\'une variable absente : ajoute-la dans\n'
-      + 'Vercel → Settings → Environment Variables, PUIS relance un déploiement\n'
-      + '(les variables ne sont lues qu\'au déploiement suivant).\n',
-    );
-    return;
-  }
-
   // Vercel livre l'URL complète, préfixe compris (/api/etat), alors que le routeur raisonne en
   // chemins nus (/etat) — les mêmes qu'en local, où l'API a son propre port et pas de préfixe.
   // On retire donc le préfixe ici, une seule fois, plutôt que de faire porter à chaque route

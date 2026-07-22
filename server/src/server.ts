@@ -48,8 +48,6 @@ import {
 } from './equipement-api.ts';
 import type { PaiementRequete } from './equipement-api.ts';
 
-verifierEnvAuDemarrage();
-
 async function lireCorpsJSON<T>(req: IncomingMessage): Promise<T> {
   const morceaux: Buffer[] = [];
   for await (const morceau of req) morceaux.push(morceau as Buffer);
@@ -82,7 +80,7 @@ function cookieAttributs(maxAgeSecondes: number): string {
  * Le routeur complet, extrait de createServer pour pouvoir servir DEUX contextes avec
  * exactement le même code (aucune duplication, donc aucune dérive possible entre les deux) :
  *   · en local, un vrai serveur node:http — voir le bas de ce fichier ;
- *   · en production, une fonction Vercel — voir api/[[...chemin]].ts.
+ *   · en production, une fonction Vercel — voir api/[...chemin].ts.
  *
  * La signature (req, res) de node:http est précisément celle qu'attend une fonction Vercel :
  * il n'y a rien à réécrire, juste à exporter.
@@ -452,9 +450,18 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
 }
 
 // Démarrage LOCAL uniquement. Sur Vercel, ce fichier n'est jamais exécuté directement :
-// c'est api/[[...chemin]].ts qui importe `gererRequete` — donc rien n'écoute de port, et ce
+// c'est api/[...chemin].ts qui importe `gererRequete` — donc rien n'écoute de port, et ce
 // bloc est ignoré.
+//
+// ⚠️ La vérification des variables d'environnement est DANS ce bloc, et non au chargement du
+// module comme avant. Sur Vercel, une erreur levée à l'import se produit avant le moindre code
+// à nous : la plateforme ne peut alors afficher qu'un « FUNCTION_INVOCATION_FAILED » muet, qui
+// ne dit pas quelle variable manque. Ici, une variable absente remonte à la première requête
+// qui la lit, et le try/catch de gererRequete en renvoie le message en clair.
+// En local, on garde l'échec immédiat au démarrage : c'est plus utile que de le découvrir
+// à la première requête.
 if (process.env.VERCEL === undefined) {
+  verifierEnvAuDemarrage();
   createServer(gererRequete).listen(env.port, () => {
     console.log(`One Piece Arena — serveur d'auth Twitch sur http://localhost:${env.port}`);
     console.log(`  → connexion : http://localhost:${env.port}/auth/twitch/login`);
