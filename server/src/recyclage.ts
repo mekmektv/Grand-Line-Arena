@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — recycler un perso qu'on possède contre des Berrys (§4 GAME_DESIGN.md).
+// GRAND LINE ARENA — recycler un perso qu'on possède contre des Berrys (§4 GAME_DESIGN.md).
 //
 // Un seul chemin pour les deux entrées demandées :
 //   · juste après un tirage, sur l'écran de révélation (le perso vient d'entrer en collection) ;

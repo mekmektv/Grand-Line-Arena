@@ -1,4 +1,4 @@
-# One Piece Arena
+# Grand Line Arena
 
 Jeu de collection et de combat pour les viewers d'une chaîne Twitch. Conçu pour le mobile, en
 portrait. On incarne un pirate, on l'améliore, on affronte les persos des autres viewers, et on

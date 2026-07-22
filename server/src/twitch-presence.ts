@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : présence en live (§3 GAME_DESIGN.md).
+// GRAND LINE ARENA — Brique 6 : présence en live (§3 GAME_DESIGN.md).
 //
 // La partie calcul est pure (aucun accès base, aucune horloge lue en interne), comme
 // recharge.ts. L'appelant (twitch-api.ts) lit l'état en base, appelle ces fonctions, et

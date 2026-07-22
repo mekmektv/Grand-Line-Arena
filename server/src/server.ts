@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — serveur HTTP. Brique 3 : uniquement la connexion Twitch.
+// GRAND LINE ARENA — serveur HTTP. Brique 3 : uniquement la connexion Twitch.
 //
 // Volontairement sans framework (Express, Fastify...) : `node:http` suffit pour 4 routes,
 // et ça garde le projet "zéro npm install" comme le reste (voir README).
@@ -611,7 +611,7 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
 if (process.env.VERCEL === undefined) {
   verifierEnvAuDemarrage();
   createServer(gererRequete).listen(env.port, () => {
-    console.log(`One Piece Arena — serveur d'auth Twitch sur http://localhost:${env.port}`);
+    console.log(`Grand Line Arena — serveur d'auth Twitch sur http://localhost:${env.port}`);
     console.log(`  → connexion : http://localhost:${env.port}/auth/twitch/login`);
   });
 }

@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — validation de l'onboarding (Brique 3), SANS passer par le vrai écran
+// GRAND LINE ARENA — validation de l'onboarding (Brique 3), SANS passer par le vrai écran
 // Twitch : on simule juste "un twitch_id inconnu vient de se connecter" et on vérifie que
 // connecterOuCreerJoueur() fait exactement ce que dit GAME_DESIGN.md §4 :
 //   1 perso commun OFFERT + 1 tirage gratuit immédiat, une seule fois par joueur.

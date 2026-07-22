@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Supabase Storage via son API REST, même logique que supabase.ts :
+// GRAND LINE ARENA — Supabase Storage via son API REST, même logique que supabase.ts :
 // `fetch` natif, pas de SDK, clé service_role côté serveur uniquement.
 
 import { env } from './env.ts';

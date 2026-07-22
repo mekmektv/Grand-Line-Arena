@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — lecteur des fichiers de seed SQL. OUTIL DE TEST UNIQUEMENT.
+// GRAND LINE ARENA — lecteur des fichiers de seed SQL. OUTIL DE TEST UNIQUEMENT.
 //
 // À quoi ça sert : la validation d'équilibrage doit tourner sur les VRAIES données du jeu,
 // pas sur des chiffres recopiés à la main dans le test (sinon le test ne prouve rien : il

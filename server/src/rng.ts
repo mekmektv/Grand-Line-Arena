@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — le hasard du combat.
+// GRAND LINE ARENA — le hasard du combat.
 //
 // Pourquoi ne pas utiliser Math.random() : le combat doit être DÉTERMINISTE côté serveur (§6).
 // Avec un seed, le même combat rejoué donne exactement le même résultat, coup pour coup.

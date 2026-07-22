@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — insère les réglages de la Brique 6 (Twitch en live) : taux du tirage
+// GRAND LINE ARENA — insère les réglages de la Brique 6 (Twitch en live) : taux du tirage
 // premium (§5bis) et gains de présence (§3).
 //
 //   node server/scripts/maj-config-twitch.ts

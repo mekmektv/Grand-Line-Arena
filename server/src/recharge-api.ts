@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — branche la logique pure de recharge.ts sur la base.
+// GRAND LINE ARENA — branche la logique pure de recharge.ts sur la base.
 //
 // Il n'y a pas de tâche planifiée qui recharge tout le monde à minuit : la recharge est
 // PARESSEUSE, appliquée quand le joueur se manifeste. C'est volontaire — ça ne demande aucun

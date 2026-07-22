@@ -1,4 +1,4 @@
-# 🏴‍☠️ One Piece Arena — frontend (Brique 5)
+# 🏴‍☠️ Grand Line Arena — frontend (Brique 5)
 
 React + Vite, connecté au backend de `server/`. Reprend l'identité visuelle du §8
 GAME_DESIGN.md (fond sombre, accents rose/or/cyan, police Bangers).

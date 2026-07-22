@@ -1,4 +1,4 @@
-# ⚔️ Moteur de combat + connexion Twitch — ONE PIECE ARENA
+# ⚔️ Moteur de combat + connexion Twitch — GRAND LINE ARENA
 
 Le moteur prend **2 persos + leur niveau** et rend **le vainqueur + la liste des événements**
 que le front rejouera. Depuis la Brique 3, il y a aussi un petit serveur HTTP qui gère la
@@ -56,7 +56,7 @@ exprès pour le développement local uniquement.
 1. Va sur **[dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)** → connecte-toi avec ton
    compte Twitch (celui du streamer) → **Register Your Application**.
 2. Remplis :
-   - **Name** : `One Piece Arena` (ou ce que tu veux, doit juste être unique sur Twitch)
+   - **Name** : `Grand Line Arena` (ou ce que tu veux, doit juste être unique sur Twitch)
    - **OAuth Redirect URLs** : `http://localhost:8787/auth/twitch/callback`
      ⚠️ Doit correspondre **exactement** (protocole, port, `/auth/twitch/callback`) à ce que tu
      mettras dans `TWITCH_REDIRECT_URI` — sinon Twitch refuse la connexion.
@@ -86,7 +86,7 @@ node server/src/server.ts
 
 Tu dois voir :
 ```
-One Piece Arena — serveur d'auth Twitch sur http://localhost:8787
+Grand Line Arena — serveur d'auth Twitch sur http://localhost:8787
   → connexion : http://localhost:8787/auth/twitch/login
 ```
 

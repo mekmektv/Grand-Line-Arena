@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — la formule des stats. §4 EQUILIBRAGE_FINAL.md, §3 GAME_DESIGN.md.
+// GRAND LINE ARENA — la formule des stats. §4 EQUILIBRAGE_FINAL.md, §3 GAME_DESIGN.md.
 //
 //   budget_effectif = BUDGET[rareté][niveau] / (1 + coût_kit)
 //   h               = 0.40 Bourrin | 0.50 Équilibré | 0.60 Tank

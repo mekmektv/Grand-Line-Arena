@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — insère les réglages du pool de bots (§4bis) et de la prime (§8 point 7).
+// GRAND LINE ARENA — insère les réglages du pool de bots (§4bis) et de la prime (§8 point 7).
 //
 //   node server/scripts/maj-bots-et-prime.ts
 //

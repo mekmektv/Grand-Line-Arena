@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — connexion Twitch : trouve ou crée le joueur.
+// GRAND LINE ARENA — connexion Twitch : trouve ou crée le joueur.
 // GAME_DESIGN.md §4 "Nouveaux joueurs" : 1 perso commun OFFERT + 1 tirage gratuit immédiat.
 //
 // ⚠️ Ce fichier ne DONNE plus rien à la création du compte (changement du 21/07/2026).

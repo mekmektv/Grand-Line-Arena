@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — l'équipement : coffres, bonus, recyclage, sacrifice. §4ter.
+// GRAND LINE ARENA — l'équipement : coffres, bonus, recyclage, sacrifice. §4ter.
 //
 // Logique pure, comme combat.ts et gacha.ts : ce fichier ne touche jamais la base. Il reçoit
 // l'état du joueur (Berrys, objets possédés) et rend le résultat. C'est `equipement-api.ts`

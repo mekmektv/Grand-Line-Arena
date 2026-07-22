@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — le coffre en SVG, partage par le roll perso et le coffre d'equipement.
+// GRAND LINE ARENA — le coffre en SVG, partage par le roll perso et le coffre d'equipement.
 //
 // Sorti de Tirage.tsx le 21/07/2026 : les deux ecrans en ont besoin, et faire importer
 // components/Equipement.tsx depuis screens/Tirage.tsx aurait cree un import circulaire

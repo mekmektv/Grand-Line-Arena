@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — l'XP et la montée de niveau d'un perso. §3 GAME_DESIGN.md.
+// GRAND LINE ARENA — l'XP et la montée de niveau d'un perso. §3 GAME_DESIGN.md.
 //
 // Logique pure, comme gacha.ts et combat.ts : ce fichier ne touche jamais la base. Il prend
 // l'XP actuelle d'un perso et l'issue d'un combat, et rend le nouvel état. C'est à l'appelant

@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — VALIDATION DE L'ÉQUIPEMENT (§4ter).
+// GRAND LINE ARENA — VALIDATION DE L'ÉQUIPEMENT (§4ter).
 //
 //   node server/scripts/validation-equipement.ts
 //

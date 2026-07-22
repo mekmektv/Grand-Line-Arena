@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — le classement (§8 point 7 : "top viewers + ta position mise en avant").
+// GRAND LINE ARENA — le classement (§8 point 7 : "top viewers + ta position mise en avant").
 //
 // Classé par PRIME depuis le 22/07/2026 (voir prime.ts). Avant, le tri se faisait sur les
 // Berrys — donc sur la RÉSERVE : un joueur qui dépensait tout en tirages dégringolait, et

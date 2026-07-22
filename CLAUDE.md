@@ -1,4 +1,4 @@
-# ONE PIECE ARENA — mémo pour l'assistant
+# GRAND LINE ARENA — mémo pour l'assistant
 
 Jeu de collection/combat pour les viewers Twitch d'une chaîne. Mobile portrait.
 **Le doc de référence est `GAME_DESIGN (1).md`** — il fait autorité sur les règles du jeu.

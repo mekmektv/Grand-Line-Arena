@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — l'équipement côté écran (§4ter).
+// GRAND LINE ARENA — l'équipement côté écran (§4ter).
 //
 // Deux blocs, montés à deux endroits (décidé le 21/07/2026) :
 //   • <CoffreEquipement>      → écran Coffres, sous le roll perso. Ne fait QUE vendre des

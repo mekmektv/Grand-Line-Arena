@@ -1,4 +1,4 @@
-# Déploiement — One Piece Arena
+# Déploiement — Grand Line Arena
 
 **En ligne : <https://grand-line-arena.vercel.app>**
 Front + API sur **Vercel**, base sur **Supabase**. Chaque `git push` sur `main` redéploie tout.

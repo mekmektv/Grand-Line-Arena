@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — crédite manuellement des coffres premium à un compte, pour tester le roll
+// GRAND LINE ARENA — crédite manuellement des coffres premium à un compte, pour tester le roll
 // premium sans attendre une vraie redemption Twitch en live.
 //
 //   node server/scripts/crediter-coffre-premium.ts <twitch_id> <quantite>

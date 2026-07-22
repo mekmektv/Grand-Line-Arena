@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : le jeton OAuth DU STREAMER (scopes élevés), distinct des jetons
+// GRAND LINE ARENA — Brique 6 : le jeton OAuth DU STREAMER (scopes élevés), distinct des jetons
 // joueurs de auth-twitch (server.ts), qui ne servent qu'une fois à la connexion et ne sont
 // jamais stockés. Celui-ci doit vivre en continu (Get Chatters, EventSub), donc il est
 // persisté en base avec son refresh token — voir supabase/A_APPLIQUER_twitch.sql.

@@ -3,7 +3,7 @@ import type { ResultatCombatComplet, Evenement, PacketSprite, Camp } from '../ap
 import { Berry } from '../components/Berry';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ONE PIECE ARENA — écran de combat. Port du rendu de testeur-combat.html (canvas 2D),
+// GRAND LINE ARENA — écran de combat. Port du rendu de testeur-combat.html (canvas 2D),
 // adapté au format mobile portrait et branché sur les VRAIS événements de combat.ts —
 // contrairement au testeur, qui inventait son propre combat pour tester des sprites,
 // ici le canvas ne fait QUE rejouer une liste déjà calculée par le serveur (§6).
@@ -833,19 +833,23 @@ export function Combat({
         </div>
 
         {/* Pédagogie du triangle : sans ça, personne ne comprend jamais le système de classes,
-            et l'écran VS est le seul endroit naturel pour l'enseigner. */}
-        {combat.avantage && (
-          <div style={{
-            position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
-            background: 'rgba(0,0,0,.45)', border: '2px solid var(--or)', borderRadius: 20,
-            padding: '6px 14px', animation: 'fadeMonte .4s ease-out .8s both',
-          }}
-          >
-            <span style={{ font: '800 11px Rubik,Arial', color: 'var(--or)' }}>
-              ⚔️ {combat.avantage.camp === 'a' ? gauche.classe : droite.classe} contre {combat.avantage.camp === 'a' ? droite.classe : gauche.classe} — dégâts ×{combat.avantage.multiplicateur}
-            </span>
-          </div>
-        )}
+            et l'écran VS est le seul endroit naturel pour l'enseigner. Toujours affiché (même
+            neutre) : sans matchup visible en l'absence d'avantage, le joueur ne pouvait jamais
+            vérifier qu'il N'Y A PAS d'avantage — ×1.1 en dur était illisible, remplacé par le
+            nom de la classe qui en profite. */}
+        <div style={{
+          position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
+          background: 'rgba(0,0,0,.45)', border: '2px solid var(--or)', borderRadius: 20,
+          padding: '6px 14px', animation: 'fadeMonte .4s ease-out .8s both',
+        }}
+        >
+          <span style={{ font: '800 11px Rubik,Arial', color: 'var(--or)' }}>
+            ⚔️ {gauche.classe} vs {droite.classe} —{' '}
+            {combat.avantage
+              ? `avantage ${combat.avantage.camp === 'a' ? gauche.classe : droite.classe}`
+              : 'neutre'}
+          </span>
+        </div>
 
         <div style={{ position: 'relative', font: '700 11px Rubik,Arial', color: 'rgba(239,231,214,.6)', textAlign: 'center', animation: 'fadeMonte .4s ease-out 1.1s both' }}>
           {spritesPrets ? 'L\'équipage est prêt — touche pour en découdre' : 'L\'équipage se prépare…'}

@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — VALIDATION DE LA RECHARGE (énergie quotidienne, changements hebdo).
+// GRAND LINE ARENA — VALIDATION DE LA RECHARGE (énergie quotidienne, changements hebdo).
 //
 //   node server/scripts/validation-recharge.ts
 //

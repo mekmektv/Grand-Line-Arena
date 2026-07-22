@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — construit le "paquet sprite" d'un perso pour l'écran de combat : les URLs
+// GRAND LINE ARENA — construit le "paquet sprite" d'un perso pour l'écran de combat : les URLs
 // de chaque frame d'animation (lues depuis Supabase Storage) + les constantes de rendu du §7.
 //
 // ⚠️ Le front calcule lui-même `ref` (la hauteur de référence, en pixels de l'image idle) une

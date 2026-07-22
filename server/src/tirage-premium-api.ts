@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : ouverture d'un coffre premium (points de chaîne Twitch).
+// GRAND LINE ARENA — Brique 6 : ouverture d'un coffre premium (points de chaîne Twitch).
 // Même rendu qu'un tirage normal (tirage-api.ts), mais consomme `coffres_premium_perso`
 // au lieu de Berrys, et pioche dans `drop_rates_premium` via gacha.ts:tirerPremium().
 

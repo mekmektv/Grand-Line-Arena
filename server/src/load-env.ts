@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — charge server/.env dans process.env. Import à faire EN PREMIER
+// GRAND LINE ARENA — charge server/.env dans process.env. Import à faire EN PREMIER
 // (avant tout import qui lit `env`), dans server.ts et les scripts.
 //
 // Pas de dépendance `dotenv` : le fichier est trivial (clé=valeur), pas besoin d'un paquet.

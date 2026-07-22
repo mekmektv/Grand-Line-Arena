@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : branchement base des événements EventSub (redemption, stream
+// GRAND LINE ARENA — Brique 6 : branchement base des événements EventSub (redemption, stream
 // online/offline). La logique de calcul reste dans twitch-presence.ts (pur) ; ce fichier ne
 // fait que lire/écrire, comme collection.ts, recyclage.ts, etc. (convention du projet).
 

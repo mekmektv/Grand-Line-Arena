@@ -1,4 +1,4 @@
-# 🏴‍☠️ ONE PIECE ARENA — Document de référence
+# 🏴‍☠️ GRAND LINE ARENA — Document de référence
 
 > **Source de vérité du projet.** À déposer dans le Projet Claude et à donner à Claude Code.
 > Mettre à jour à chaque décision.

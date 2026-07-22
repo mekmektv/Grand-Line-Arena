@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — le tirage de perso (gacha). §3bis / §4 GAME_DESIGN.md.
+// GRAND LINE ARENA — le tirage de perso (gacha). §3bis / §4 GAME_DESIGN.md.
 //
 // Logique pure, comme combat.ts : ce fichier ne touche jamais la base. Il prend l'état du
 // joueur (Berrys, persos déjà possédés) et le catalogue `characters`, et rend le résultat

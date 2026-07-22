@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : vérification de signature des notifications EventSub (webhook).
+// GRAND LINE ARENA — Brique 6 : vérification de signature des notifications EventSub (webhook).
 //
 // Doc Twitch : la signature attendue est HMAC-SHA256("sha256=" + hex) de la CONCATÉNATION
 // message-id + timestamp + corps BRUT (avant tout JSON.parse), avec le secret partagé au moment

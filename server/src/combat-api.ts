@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — déclenche un combat réel : choisit l'adversaire, appelle le vrai moteur
+// GRAND LINE ARENA — déclenche un combat réel : choisit l'adversaire, appelle le vrai moteur
 // (combat.ts, jamais modifié), persiste le résultat, distribue les gains, prépare les sprites.
 //
 // Le §4bis est désormais couvert en entier (22/07/2026) : appariement aléatoire parmi les vrais

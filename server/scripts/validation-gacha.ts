@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — VALIDATION DU TIRAGE DE PERSO.
+// GRAND LINE ARENA — VALIDATION DU TIRAGE DE PERSO.
 //
 //   node server/scripts/validation-gacha.ts
 //

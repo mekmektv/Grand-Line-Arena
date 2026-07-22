@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — LE MOTEUR DE COMBAT.
+// GRAND LINE ARENA — LE MOTEUR DE COMBAT.
 //
 // Il prend 2 persos + leur niveau, et rend : le vainqueur + la liste des événements que le
 // front rejouera. Le client ne calcule RIEN (§6 GAME_DESIGN) : anti-triche, et léger.

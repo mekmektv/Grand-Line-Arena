@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — SIMULATION ÉCONOMIQUE DES QUÊTES (§4 + §8).
+// GRAND LINE ARENA — SIMULATION ÉCONOMIQUE DES QUÊTES (§4 + §8).
 //
 //   node server/scripts/simu-quetes.ts
 //

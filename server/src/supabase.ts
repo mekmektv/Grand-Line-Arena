@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — accès à Supabase via son API REST (PostgREST), sans dépendance npm.
+// GRAND LINE ARENA — accès à Supabase via son API REST (PostgREST), sans dépendance npm.
 //
 // On reste sur `fetch` natif (Node ≥ 18) exprès : tout le reste du projet tourne sans
 // `npm install` (voir server/README.md), pas de raison de casser ça pour ajouter le SDK

@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — changement de perso actif (§3 : 3 changements gratuits/semaine).
+// GRAND LINE ARENA — changement de perso actif (§3 : 3 changements gratuits/semaine).
 //
 // §3 : "Débloquer un perso (roll) = changement gratuit immédiat, ne consomme pas le quota."
 // Comme cette route est appelée séparément du tirage (le joueur clique "Incarner" après

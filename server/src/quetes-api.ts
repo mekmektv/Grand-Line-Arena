@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — branche la logique pure de quetes.ts sur la base (§8).
+// GRAND LINE ARENA — branche la logique pure de quetes.ts sur la base (§8).
 //
 // Comme la recharge, rien n'est précalculé ni planifié : l'état des quêtes se reconstruit à la
 // demande, quand le joueur ouvre l'écran. La progression se LIT directement dans `fights` et

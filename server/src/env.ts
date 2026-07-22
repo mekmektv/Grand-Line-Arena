@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — variables d'environnement du serveur HTTP.
+// GRAND LINE ARENA — variables d'environnement du serveur HTTP.
 //
 // Même philosophie que config.ts : une variable manquante plante IMMÉDIATEMENT avec un
 // message clair, plutôt que de démarrer un serveur à moitié configuré.

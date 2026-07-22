@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — session joueur : un cookie signé (HMAC), pas de table `sessions`.
+// GRAND LINE ARENA — session joueur : un cookie signé (HMAC), pas de table `sessions`.
 //
 // Le cookie contient `{ playerId, expire }` encodé en base64url, suivi d'une signature
 // HMAC-SHA256. Le serveur est la seule autorité (clé secrète jamais envoyée au client) :

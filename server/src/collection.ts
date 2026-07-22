@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — la collection d'un joueur : le catalogue complet (§8 point 4), avec
+// GRAND LINE ARENA — la collection d'un joueur : le catalogue complet (§8 point 4), avec
 // pour chaque perso soit ses infos de possession (niveau, xp, stats), soit "verrouillé".
 
 import type { Niveau } from './index.ts';

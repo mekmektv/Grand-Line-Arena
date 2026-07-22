@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — importe les zips de sprites (§7 GAME_DESIGN.md) dans Supabase Storage
+// GRAND LINE ARENA — importe les zips de sprites (§7 GAME_DESIGN.md) dans Supabase Storage
 // + remplit les colonnes d'assets de `characters`. Réutilisable pour les prochaines vagues
 // de persos (§10) : dépose les nouveaux zips dans le dossier, relance le script.
 //

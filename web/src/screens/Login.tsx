@@ -32,7 +32,7 @@ export function Login() {
       }}
       >
         <div className="titre-shonen" style={{ font: "400 40px/1 Bangers,Rubik", transform: 'skew(-8deg)', color: '#fff', textShadow: '3px 3px 0 #12324a' }}>
-          ONE PIECE ARENA
+          GRAND LINE ARENA
         </div>
         <div style={{ font: "600 13px/1.5 Rubik,Arial", color: 'var(--texte)', opacity: 0.9 }}>
           Incarne un pirate, prends la mer,<br />crée ton équipage et fais gonfler ta prime.

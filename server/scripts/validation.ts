@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — VALIDATION DE L'ÉQUILIBRAGE.
+// GRAND LINE ARENA — VALIDATION DE L'ÉQUILIBRAGE.
 //
 //   node server/scripts/validation.ts
 //

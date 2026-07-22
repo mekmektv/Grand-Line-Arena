@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — branche la logique pure de gacha.ts sur la vraie base (lecture des
+// GRAND LINE ARENA — branche la logique pure de gacha.ts sur la vraie base (lecture des
 // soldes/collection, écriture du résultat). gacha.ts lui-même ne change jamais.
 //
 // Simplification ASSUMÉE : en cas de doublon, le recyclage est appliqué AUTOMATIQUEMENT

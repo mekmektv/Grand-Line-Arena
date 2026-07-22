@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : crée la récompense "Tirage premium" et les abonnements EventSub
+// GRAND LINE ARENA — Brique 6 : crée la récompense "Tirage premium" et les abonnements EventSub
 // (redemption + stream online/offline). À lancer UNE FOIS, après avoir visité
 // /auth/twitch/streamer/login?cle=... (le jeton broadcaster doit déjà être en base).
 //

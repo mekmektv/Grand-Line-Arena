@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — branche la logique pure de equipement.ts sur la vraie base. §4ter.
+// GRAND LINE ARENA — branche la logique pure de equipement.ts sur la vraie base. §4ter.
 // equipement.ts lui-même ne touche jamais Supabase et ne change pas quand ce fichier change.
 //
 // LES TROIS RÈGLES DE GAMEPLAY QUE CE FICHIER FAIT RESPECTER (décidées le 21/07/2026) :

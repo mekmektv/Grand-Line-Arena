@@ -1,4 +1,4 @@
-# 🏴‍☠️ ONE PIECE ARENA — FICHE DES PERSOS (vague 1)
+# 🏴‍☠️ GRAND LINE ARENA — FICHE DES PERSOS (vague 1)
 
 > Les 16 persos, prêts à créer en base. Chiffres validés par simulation (`v6.py`).
 > Version machine-lisible : **`persos.csv`** — c'est elle qu'on importe, pas ce fichier.

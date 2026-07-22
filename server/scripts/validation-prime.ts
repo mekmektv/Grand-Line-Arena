@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — VALIDATION DE LA PRIME (§8 point 7).
+// GRAND LINE ARENA — VALIDATION DE LA PRIME (§8 point 7).
 //
 //   node server/scripts/validation-prime.ts
 //

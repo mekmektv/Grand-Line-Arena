@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — crédite manuellement des Berrys de présence EN ATTENTE à un compte, pour
+// GRAND LINE ARENA — crédite manuellement des Berrys de présence EN ATTENTE à un compte, pour
 // tester le rond d'encaissement de l'accueil sans attendre un vrai live.
 //
 //   node server/scripts/crediter-presence.ts <twitch_id> <montant>

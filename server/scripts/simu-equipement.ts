@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — SIMULATION DE L'ÉCONOMIE DE L'ÉQUIPEMENT (§4ter)
+// GRAND LINE ARENA — SIMULATION DE L'ÉCONOMIE DE L'ÉQUIPEMENT (§4ter)
 //
 //   node server/scripts/simu-equipement.ts
 //

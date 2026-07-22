@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — Brique 6 : branchement base de la présence live (appelé par le cron
+// GRAND LINE ARENA — Brique 6 : branchement base de la présence live (appelé par le cron
 // externe toutes les 1 min). La logique de calcul reste dans twitch-presence.ts (pur).
 
 import { supabaseSelect, supabaseSelectUn, supabaseUpdate } from './supabase.ts';

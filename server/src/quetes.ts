@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — logique PURE des quêtes (§8). Aucun accès base, aucune horloge cachée :
+// GRAND LINE ARENA — logique PURE des quêtes (§8). Aucun accès base, aucune horloge cachée :
 // l'instant et les mesures sont passés en paramètres, donc entièrement testable (voir
 // server/scripts/validation-quetes.ts). Le branchement base est dans quetes-api.ts.
 //

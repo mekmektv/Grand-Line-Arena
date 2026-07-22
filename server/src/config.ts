@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — chargement de la table `config` et de la table `characters`.
+// GRAND LINE ARENA — chargement de la table `config` et de la table `characters`.
 //
 // Ce fichier transforme des LIGNES DE BASE en objets utilisables par le moteur.
 // Il ne décide d'aucune valeur : si une clé manque en base, il plante avec un message clair

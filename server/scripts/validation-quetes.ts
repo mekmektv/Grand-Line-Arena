@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — VALIDATION DES QUÊTES (§8).
+// GRAND LINE ARENA — VALIDATION DES QUÊTES (§8).
 //
 //   node server/scripts/validation-quetes.ts
 //

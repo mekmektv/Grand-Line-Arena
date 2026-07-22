@@ -1,9 +1,9 @@
 {
-  "name": "one-piece-arena-server",
+  "name": "grand-line-arena-server",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "API One Piece Arena — node:http sans framework, zéro dépendance npm.",
+  "description": "API Grand Line Arena — node:http sans framework, zéro dépendance npm.",
   "engines": {
     "node": ">=24.0.0"
   },

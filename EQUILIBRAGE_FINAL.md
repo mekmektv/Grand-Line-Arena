@@ -1,4 +1,4 @@
-# ONE PIECE ARENA — ÉQUILIBRAGE FINAL (v6)
+# GRAND LINE ARENA — ÉQUILIBRAGE FINAL (v6)
 
 > **Source de vérité des chiffres de combat.** Généré par `v6.py`. À donner tel quel à Claude Code.
 > Le catalogue des persos est dans `FICHE_PERSOS.md` / `persos.csv`.

@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — le vocabulaire du moteur de combat.
+// GRAND LINE ARENA — le vocabulaire du moteur de combat.
 // Ce fichier ne contient AUCUN chiffre : que des noms de choses.
 // Les chiffres vivent en base (tables `config` et `characters`), jamais ici. (§6 GAME_DESIGN)
 

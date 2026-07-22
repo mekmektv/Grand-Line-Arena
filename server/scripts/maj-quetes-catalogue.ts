@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — met à jour `config.quetes_catalogue` d'après la simulation d'économie
+// GRAND LINE ARENA — met à jour `config.quetes_catalogue` d'après la simulation d'économie
 // du 22/07/2026 (voir server/scripts/simu-quetes.ts).
 //
 //   node server/scripts/maj-quetes-catalogue.ts

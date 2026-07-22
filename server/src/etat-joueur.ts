@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — assemble l'état du joueur pour l'écran Accueil (§8 point 2).
+// GRAND LINE ARENA — assemble l'état du joueur pour l'écran Accueil (§8 point 2).
 // Lecture seule : ne modifie jamais rien, contrairement à onboarding.ts.
 
 import type { Niveau } from './index.ts';

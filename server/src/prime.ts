@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — la prime (bounty) du classement. §8 point 7.
+// GRAND LINE ARENA — la prime (bounty) du classement. §8 point 7.
 //
 // Remplace le tri par Berrys, qui classait en réalité les joueurs par leur RÉSERVE : un joueur
 // qui dépensait tout en tirages dégringolait, et thésauriser était la meilleure façon de

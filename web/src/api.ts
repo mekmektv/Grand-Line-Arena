@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — client HTTP vers le backend (server/). Le cookie de session part tout
+// GRAND LINE ARENA — client HTTP vers le backend (server/). Le cookie de session part tout
 // seul avec `credentials: 'include'` : pas de token à gérer côté front.
 
 // En production, front et API sont servis par le même domaine Vercel : l'API vit sous /api,

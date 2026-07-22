@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — point d'entrée de l'API en production (Vercel).
+// GRAND LINE ARENA — point d'entrée de l'API en production (Vercel).
 //
 // ⚠️ Ce fichier ne contient AUCUNE logique de jeu et ne doit jamais en contenir. Il n'est
 // qu'un adaptateur : dupliquer ne serait-ce qu'une route ici la ferait diverger de la version

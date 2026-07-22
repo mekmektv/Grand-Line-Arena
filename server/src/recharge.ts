@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — recharge de l'énergie (quotidienne) et des changements de perso
+// GRAND LINE ARENA — recharge de l'énergie (quotidienne) et des changements de perso
 // (hebdomadaire). §3 / §4 GAME_DESIGN.md.
 //
 // ⚠️ Ce fichier comble un TROU RÉEL, pas une amélioration : la colonne `derniere_recharge`

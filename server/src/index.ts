@@ -1,4 +1,4 @@
-// ONE PIECE ARENA — moteur de combat. Point d'entrée public.
+// GRAND LINE ARENA — moteur de combat. Point d'entrée public.
 //
 // Usage typique côté back (quand l'API existera — elle n'est PAS dans ce lot) :
 //
