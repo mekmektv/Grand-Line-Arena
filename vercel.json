@@ -4,6 +4,7 @@
   "outputDirectory": "web/dist",
   "installCommand": "npm install",
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api?chemin=$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
