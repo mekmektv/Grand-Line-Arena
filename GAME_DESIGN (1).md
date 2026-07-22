@@ -501,14 +501,9 @@ des tirages Épiques dans le chat).
 `validation-recharge.ts` (énergie, semaine, prix des changements), `validation-onboarding.ts`.
 
 **Simplifications assumées, à reprendre plus tard :**
-- L'adversaire d'un combat est choisi au plus simple (un autre joueur au hasard, sinon un bot
-  = perso au hasard du catalogue). **L'anti-frustration du §4bis est faite** (après
-  `defaites_avant_bot_faible` défaites consécutives *contre de vrais joueurs*, l'adversaire
-  suivant est un bot Commun niveau 1, affiché sous un pseudo de `bot_pseudos` pour rester
-  indiscernable d'un viewer). Restent à faire : le pool de bots dédié (les bots piochent
-  aujourd'hui dans `characters`) et l'anti-répétition sur les 4 derniers combats — les colonnes
-  qu'elle demande (`fights.adversaire_character_id`, `fights.adversaire_pseudo`) sont déjà
-  remplies, il ne manque que la lecture.
+- *(Réglé le 22/07/2026 : le §4bis est couvert en ENTIER — appariement aléatoire, pool de
+  13 bots écrits à la main dans `config.bots_pool`, anti-frustration et anti-répétition sur
+  4 combats. Voir `combat-api.ts`.)*
 - *(Réglé le 20/07/2026 : la recharge quotidienne de l'énergie, la remise à zéro hebdomadaire
   des changements et leur tarification au-delà du quota sont faites — voir `recharge.ts` et
   `server/scripts/validation-recharge.ts`.)*
@@ -519,8 +514,15 @@ des tirages Épiques dans le chat).
   `Engage.equipement`, ajouté à plat APRÈS la formule du §4 — jamais dans le budget, sinon la
   racine carrée le rendrait inégal d'un profil à l'autre. **Les bots n'ont jamais d'équipement**,
   volontairement : leur équilibrage a été chiffré sans, et le bot faible du §4bis doit rester
-  faible. Il reste l'écran côté front, et la quête « ouvrir 1 coffre » toujours `actif:false`
-  faute d'un compteur de coffres ouverts en base.)*
+  faible. L'écran est fait depuis le 21/07.)*
+- *(Fait le 22/07/2026 : la prime — voir §4quater. `prime.ts`, `validation-prime.ts`. Le
+  classement ne trie plus par Berrys.)*
+- *(Fait le 22/07/2026 : l'onboarding est JOUÉ par le joueur — voir §4. Le compte se crée vide.)*
+- **La quête « ouvrir 1 coffre » est retirée du catalogue**, faute d'un compteur de coffres
+  ouverts en base : les objets recyclés disparaissent, on ne peut pas les compter après coup.
+- **La prime est cumulative**, donc un joueur arrivé tard ne rattrape jamais les anciens.
+  Acceptable au lancement (l'énergie plafonne tout le monde à 10 combats/jour, personne ne peut
+  creuser l'écart en jouant plus), mais appellera des **saisons** le jour où ça découragera.
 
 ### 🔑 RÈGLE D'OR
 **Tous les chiffres et le contenu vivent dans des fichiers de config / des tables — JAMAIS en dur dans le code.**

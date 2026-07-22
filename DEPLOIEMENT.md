@@ -1,11 +1,12 @@
 # Déploiement — One Piece Arena
 
-**Tout sur Vercel** (front + API), base sur **Supabase** (déjà en ligne, rien à faire).
+**En ligne : <https://grand-line-arena.vercel.app>**
+Front + API sur **Vercel**, base sur **Supabase**. Chaque `git push` sur `main` redéploie tout.
 
 Front et API partagent le **même domaine** : le site à la racine, l'API sous `/api`. Ce n'est
-pas un détail d'organisation — c'est ce qui évite les deux pièges classiques du déploiement en
-deux morceaux : le CORS, et surtout le cookie de session qu'un navigateur refuse d'envoyer
-entre deux domaines différents.
+pas un détail d'organisation — c'est ce qui évite les deux pièges du déploiement en deux
+morceaux : le CORS, et surtout le cookie de session qu'un navigateur refuse d'envoyer entre
+deux domaines différents.
 
 ---
 
@@ -13,94 +14,118 @@ entre deux domaines différents.
 
 | Fichier | Rôle |
 |---|---|
-| `vercel.json` | construit le front (`web/`) et publie `web/dist` |
-| `api/[[...chemin]].ts` | attrape toute requête `/api/…`, retire le préfixe, délègue au routeur |
+| `vercel.json` | build du front, routage de l'API, fichiers à embarquer |
+| `api/index.ts` | reçoit toute requête `/api/…`, reconstitue le chemin, délègue au routeur |
 | `server/src/server.ts` | le routeur, **partagé** entre le serveur local et la fonction Vercel |
 
 `server/src/server.ts` ne démarre un vrai serveur que **hors** Vercel (test sur
-`process.env.VERCEL`). Sur Vercel, il est seulement importé : rien n'écoute de port.
+`process.env.VERCEL`). Sur Vercel il est seulement importé : rien n'écoute de port.
 
 Le front n'a **aucune variable à configurer** : sans `VITE_API_URL`, il appelle `/api`,
-c'est-à-dire lui-même. Une variable de moins à oublier ou à mal recopier.
+c'est-à-dire lui-même.
+
+### Les deux réglages non négociables de `vercel.json`
+
+```json
+"functions": { "api/index.ts": { "includeFiles": "server/src/**" } },
+"rewrites":  [ { "source": "/api/(.*)", "destination": "/api?chemin=$1" }, … ]
+```
+
+**`includeFiles`** — Vercel n'embarque **pas** `server/src/` dans le paquet de la fonction, même
+s'il est importé. Sans cette ligne, la fonction plante au chargement avec un
+`FUNCTION_INVOCATION_FAILED` **sans le moindre message**. C'est le piège qui a coûté le plus
+cher lors de la mise en ligne.
+
+**La règle `rewrites`** — les fichiers « attrape-tout » ne fonctionnent pas ici :
+`api/[[...x]].ts` n'est pas reconnu, et `api/[...x].ts` ne capture qu'**un seul niveau** de
+chemin. `/api/etat` passait, mais `/api/auth/dev/login` renvoyait un 404 de Vercel : la moitié
+de l'API était injoignable, sans que rien ne le signale. La règle explicite passe le chemin
+d'origine dans le paramètre `chemin`, que `api/index.ts` recombine avec la requête.
 
 ---
 
-## 1. Importer le projet
-
-<https://vercel.com> → **Add New → Project** → **Import Git Repository** → `Grand-Line-Arena`.
-
-Laisse les réglages de build tels quels : `vercel.json` s'en charge. Ne renseigne **pas** de
-« Root Directory », il doit rester la racine du dépôt (l'API est dans `api/`, le front dans
-`web/` : Vercel a besoin de voir les deux).
-
-Le premier déploiement va réussir mais l'application **ne fonctionnera pas encore** : les
-variables d'environnement manquent. C'est normal, on les ajoute juste après.
-
----
-
-## 2. Les variables d'environnement
-
-**Settings → Environment Variables.** Recopie les quatre premières depuis ton `server/.env`
-local (ouvre-le avec le Bloc-notes).
+## Les variables d'environnement (Vercel → Settings → Environment Variables)
 
 | Variable | Valeur |
 |---|---|
-| `SUPABASE_URL` | identique au local |
-| `SUPABASE_SERVICE_ROLE_KEY` | identique — ⚠️ secret |
+| `SUPABASE_URL` | identique au `server/.env` local |
+| `SUPABASE_SERVICE_ROLE_KEY` | identique — 🔒 secret |
 | `TWITCH_CLIENT_ID` | identique |
-| `TWITCH_CLIENT_SECRET` | identique — ⚠️ secret |
-| `SESSION_SECRET` | **un nouveau**, différent du local |
-| `FRONTEND_URL` | `https://<ton-projet>.vercel.app` — **sans slash final** |
-| `TWITCH_REDIRECT_URI` | `https://<ton-projet>.vercel.app/api/auth/twitch/callback` |
+| `TWITCH_CLIENT_SECRET` | identique — 🔒 secret |
+| `SESSION_SECRET` | **différent** du local |
+| `FRONTEND_URL` | `https://grand-line-arena.vercel.app` — **sans slash final** |
+| `TWITCH_REDIRECT_URI` | `https://grand-line-arena.vercel.app/api/auth/twitch/callback` |
 | `DEV_AUTH_ENABLED` | **`false`** |
 
-Puis **Redeploy** : les variables ne sont lues qu'au déploiement suivant.
+Après toute modification : **Redeploy**. Les variables ne sont lues qu'au déploiement suivant.
 
 ⚠️ **`DEV_AUTH_ENABLED=false` n'est pas optionnel.** Laissé à `true`, la route
-`/api/auth/dev/login?pseudo=X` crée un compte pour n'importe qui sans aucune vérification : on
-se fabrique autant d'identités qu'on veut, et le classement perd tout sens.
+`/api/auth/dev/login?pseudo=X` crée un compte pour n'importe qui : on se fabrique autant
+d'identités qu'on veut et le classement perd tout sens.
 
-⚠️ **Ne crée jamais de variable commençant par `VITE_` contenant un secret.** Tout ce qui porte
-ce préfixe est intégré au JavaScript envoyé au navigateur, donc lisible par tous.
+⚠️ **Jamais de secret dans une variable `VITE_*`** : tout ce qui porte ce préfixe est intégré au
+JavaScript envoyé au navigateur, donc lisible par tous.
+
+`FRONTEND_URL` ne sert pas qu'aux redirections : le serveur s'en sert pour décider d'envoyer le
+cookie de session en `SameSite=None; Secure` plutôt qu'en `SameSite=Lax`.
 
 ---
 
-## 3. Twitch
+## Twitch
 
-Dans <https://dev.twitch.tv/console/apps>, sur ton application → **Manage** → **OAuth Redirect
-URLs** → **Add** (garde celle de localhost, elle sert à continuer à développer) :
+Dans <https://dev.twitch.tv/console/apps> → l'application → **Manage** → **OAuth Redirect URLs**,
+deux URL coexistent (garder les deux) :
 
 ```
-https://<ton-projet>.vercel.app/api/auth/twitch/callback
+http://localhost:8787/auth/twitch/callback                        ← développement
+https://grand-line-arena.vercel.app/api/auth/twitch/callback      ← production
 ```
 
-Elle doit être **identique au caractère près** à `TWITCH_REDIRECT_URI`. La moindre différence
-— un slash en trop, `http` au lieu de `https` — donne une erreur `redirect_mismatch`.
+La seconde doit être **identique au caractère près** à `TWITCH_REDIRECT_URI`. Toute différence
+donne une erreur `redirect_mismatch`.
 
 ---
 
-## 4. Vérifier, dans cet ordre
+## Vérifier après un déploiement
 
-Chaque étape confirme la précédente. Ne passe à la suivante que si celle d'avant est verte.
+Dans cet ordre — chaque étape confirme la précédente :
 
-1. `https://<ton-projet>.vercel.app/api/etat` → doit répondre **401** (« non connecté »).
-   Autre chose = la fonction ne démarre pas : voir les logs dans Vercel → Deployments → Runtime Logs.
-2. Ouvrir le site → l'écran de connexion doit s'afficher.
-3. **Se connecter avec Twitch** → l'écran d'autorisation Twitch apparaît.
-   `redirect_mismatch` ici = l'URL de l'étape 3 ne correspond pas.
-4. Après autorisation, tu dois revenir **connecté**. Si tu reviens déconnecté, c'est le cookie :
-   vérifier que `FRONTEND_URL` est en `https://` et sans slash final.
-5. `https://<ton-projet>.vercel.app/api/auth/dev/login?pseudo=Test` → doit répondre **404**.
-   S'il te connecte, `DEV_AUTH_ENABLED` n'est pas à `false` (ou le redéploiement manque).
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://grand-line-arena.vercel.app/api/etat
+#   401 attendu (« non connecté »). Un 500 = la fonction plante : voir Runtime Logs.
+
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://grand-line-arena.vercel.app/api/quetes/reclamer
+#   401 attendu. Un 404 = le routage multi-niveaux est cassé (règle rewrites).
+
+curl -s -w "%{http_code}\n" "https://grand-line-arena.vercel.app/api/auth/dev/login?pseudo=X"
+#   404 EXIGÉ. S'il connecte, DEV_AUTH_ENABLED n'est pas à false.
+
+curl -s -o /dev/null -w "%{http_code}\n" https://grand-line-arena.vercel.app/api/auth/twitch/login
+#   302 attendu, vers id.twitch.tv.
+```
+
+Puis, dans le navigateur : se connecter avec Twitch et vérifier qu'on revient **connecté**. Si
+on revient déconnecté, c'est le cookie : vérifier `FRONTEND_URL` (https, sans slash final).
 
 ---
 
-## Ensuite : chaque `git push` redéploie tout seul
+## Lire les bons logs quand ça casse
 
-Plus rien à faire à la main. Une modification poussée sur `main` déclenche un nouveau
-déploiement.
+Vercel en propose deux, et ils ne disent pas la même chose :
+
+- **Deployments → un déploiement → `Building`** : les erreurs de construction. ⚠️ Un déploiement
+  marqué **`Ready` (vert) peut contenir des dizaines d'erreurs TypeScript** et servir une
+  fonction cassée — le statut vert ne prouve rien.
+- **Deployments → un déploiement → `Runtime Logs`** : ce qui se passe pendant une requête. C'est
+  là qu'on voit la route réellement empruntée et le vrai message derrière un
+  `FUNCTION_INVOCATION_FAILED`.
+
+Indice utile : un crash en moins de 200 ms avec « No outgoing requests » signifie que la
+fonction meurt **au chargement du module**, avant d'atteindre la base.
+
+---
 
 ## Ce qui reste local
 
 Les scripts de `server/scripts/` (validations, simulations, utilitaires de compte) tournent sur
-ta machine avec `server/.env`. Ils ne sont pas déployés et n'ont pas à l'être.
+la machine avec `server/.env`. Ils ne sont pas déployés et n'ont pas à l'être.
