@@ -3,6 +3,11 @@
   "buildCommand": "cd web && npm install && npm run build",
   "outputDirectory": "web/dist",
   "installCommand": "npm install",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "server/src/**"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api?chemin=$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
