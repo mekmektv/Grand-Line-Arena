@@ -66,7 +66,11 @@ export async function uploaderFichier(
       'Content-Type': deviverContentType(cheminDansBucket),
       'x-upsert': 'true',
     },
-    body: contenu,
+    // `new Uint8Array(...)` et non le Buffer brut : selon la version des types Node, `fetch`
+    // refuse un Buffer comme corps de requête (« Type 'Buffer' is not assignable to type
+    // 'BodyInit' »). La conversion est gratuite — un Uint8Array partage la mémoire du Buffer,
+    // rien n'est recopié — et elle vaut pour toutes les versions.
+    body: new Uint8Array(contenu),
   });
   if (!res.ok) {
     throw new Error(`Storage : upload de "${cheminDansBucket}" échoué : ${res.status} ${await res.text()}`);

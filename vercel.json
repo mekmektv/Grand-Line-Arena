@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd web && npm install && npm run build",
   "outputDirectory": "web/dist",
-  "installCommand": "echo 'dépendances installées par buildCommand (le front vit dans web/)'",
+  "installCommand": "npm install",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

@@ -1,0 +1,16 @@
+{
+  "name": "one-piece-arena",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Jeu de collection/combat pour les viewers Twitch. Front dans web/, API dans server/ (servie par api/ en production).",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:web": "cd web && tsc -b --force",
+    "validate": "node server/scripts/validation.ts && node server/scripts/validation-gacha.ts && node server/scripts/validation-recharge.ts && node server/scripts/validation-quetes.ts && node server/scripts/validation-equipement.ts && node server/scripts/validation-prime.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "typescript": "~6.0.2"
+  }
+}

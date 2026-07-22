@@ -17,7 +17,11 @@ interface LigneCharacterComplete {
   competence_nom: string | null;
   competence_type: string | null;
   competence_declencheur: string | null;
-  competence_effet: unknown;
+  // Le même type que `LigneCharacter` (config.ts), et non `unknown` : ces lignes sont
+  // passées telles quelles à chargerPerso(), donc les deux déclarations doivent concorder.
+  // Avec `unknown`, TypeScript refusait l'appel — une erreur qui dormait depuis le début du
+  // projet, `server/` n'ayant jamais été vérifié faute de tsconfig.json.
+  competence_effet?: string | Record<string, unknown> | null;
   sprite_folder: string;
   image_menu: string | null;
 }

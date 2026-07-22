@@ -1,0 +1,30 @@
+{
+  // Racine du dépôt — couvre l'API (api/) et le serveur (server/), PAS le front, qui a sa
+  // propre configuration dans web/.
+  //
+  // ⚠️ Ce fichier manquait, et son absence a coûté cher : `server/` n'a jamais été vérifié par
+  // TypeScript de tout le projet (le `tsc -b` documenté ne couvre que web/). C'est la
+  // construction Vercel qui a fini par révéler une centaine d'erreurs dormantes.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    // Le serveur s'exécute en TypeScript DIRECTEMENT (node src/server.ts, sans étape de
+    // build) : Node exige alors le chemin réel du fichier, donc l'extension .ts dans les
+    // imports. Sans cette option, TypeScript refuse cette écriture — c'est l'erreur TS5097
+    // répétée une centaine de fois dans les logs de build Vercel.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
+  },
+  "include": ["api/**/*.ts", "server/src/**/*.ts", "server/scripts/**/*.ts"]
+}
