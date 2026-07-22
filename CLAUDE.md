@@ -167,16 +167,34 @@ qui lisent le seed, pas la base — se sont mis à planter. Une base recréée a
 tous les écrans, combat animé, XP des persos, recharge d'énergie, matchmaking complet (§4bis),
 recyclage, quêtes, équipement, onboarding joué par le joueur, prime au classement.
 
-### Prochaine étape : Brique 6 (intégration Twitch)
+### Brique 6 (Twitch en live) — présence et coffre premium FAITS
 
-Présence des viewers → Berrys, points de chaîne, roll premium, annonce des tirages Épiques dans
-le chat. Les prérequis sont levés : l'app Twitch existe, le login réel fonctionne, et les
-comptes portent de **vrais `twitch_id`** (indispensable pour attribuer les gains de présence).
+Câblés et configurés en production (voir GAME_DESIGN §5/§5bis pour le détail des règles) :
 
-EventSub a deux transports : **webhook** (URL publique — désormais disponible) ou **WebSocket**
-(fonctionne depuis localhost). Le second permet de développer sans redéployer à chaque essai.
+- **Présence en live → Berrys.** Cron externe (cron-job.org, appel `/cron/presence` toutes les
+  1 min — le Cron de Vercel ne permet qu'un déclenchement/jour sur le plan gratuit, insuffisant
+  ici) qui interroge Get Chatters. Les Berrys s'accumulent dans un compteur "en attente"
+  (`players.presence_berrys_en_attente`), **jamais crédités automatiquement** : le joueur les
+  encaisse lui-même en cliquant sur le rond du bandeau Twitch de l'accueil.
+- **Coffre premium** (uniquement le tirage perso, pas l'équipement — décidé le 22/07/2026) :
+  Custom Reward Twitch à 1000 points, 1×/viewer/live, meilleurs taux
+  (`drop_rates_premium` en config). Crédité via webhook EventSub sur la redemption, dans
+  `players.coffres_premium_perso`. Bouton "ROLL PERSONNAGE PREMIUM" sur l'écran Coffres,
+  toujours visible avec un compteur rond (x0 inclus), pas caché à zéro.
+- **Statut live réel** sur le bandeau de l'accueil (`etat.live_en_direct`, mis à jour par
+  `stream.online`/`.offline`), avec un lien cliquable vers la vraie chaîne Twitch.
+- Autorisation **du streamer** séparée du login joueur normal (`/auth/twitch/streamer/login`,
+  scopes élevés, jeton stocké en base avec refresh — voir `twitch-broadcaster.ts`).
 
-### Reste à faire, hors Brique 6
+⚠️ **Le backend tourne en fonction Vercel serverless, pas sur Railway** (l'ancien plan
+"3 briques" plus bas est dépassé) — une fonction Vercel ne tient pas de connexion permanente,
+d'où EventSub en **webhook** (pas WebSocket) et le cron externe plutôt qu'une boucle interne.
+
+**Reste de la Brique 6** : l'annonce dans le chat quand un viewer défie et bat un autre viewer
+en duel — **mise de côté** (fonctionnalité de duel elle-même pas encore conçue), l'utilisateur
+préviendra quand l'attaquer. Pas encore testé en conditions réelles (prochain live).
+
+### Reste à faire
 
 - **Sons** — non commencé, repoussé par l'utilisateur.
 - **Saisons de prime** — la prime est cumulative, donc les anciens sont mécaniquement
@@ -186,6 +204,7 @@ EventSub a deux transports : **webhook** (URL publique — désormais disponible
 - **Encart « Dev only — Connexion de test »** — toujours affiché sur le site public. Le bouton
   ne fait plus rien (route en 404), mais c'est déroutant pour un viewer.
 - **Fiche joueur détaillée** au classement (palmarès, derniers combats).
+- **Duel entre viewers + annonce dans le chat** — voir ci-dessus.
 
 ### Décisions structurantes à connaître
 

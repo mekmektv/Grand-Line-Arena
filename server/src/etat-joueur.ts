@@ -7,6 +7,7 @@ import { appliquerRecharges } from './recharge-api.ts';
 import { prixProchainChangement } from './recharge.ts';
 import { supabaseSelect, supabaseSelectUn } from './supabase.ts';
 import { urlPublique } from './assets.ts';
+import { lireEtatLive } from './twitch-live-api.ts';
 
 interface LigneJoueur {
   id: string;
@@ -83,14 +84,17 @@ export interface EtatJoueur {
   /** Brique 6 : coffres premium en stock (gagnés via points de chaîne), à ouvrir depuis l'écran
    *  Tirage. */
   coffres_premium_perso: number;
+  /** Brique 6 : true si le live est en cours (mis à jour par stream.online/.offline EventSub). */
+  live_en_direct: boolean;
 }
 
 // ⚠️ Ce module n'est plus en lecture seule : l'écran d'accueil est la porte d'entrée normale du
 // joueur, donc c'est ici que la recharge quotidienne se déclenche le plus souvent (§4).
 export async function lireEtatJoueur(playerId: string): Promise<EtatJoueur | null> {
-  const [joueur, lignesConfigBrutes] = await Promise.all([
+  const [joueur, lignesConfigBrutes, live] = await Promise.all([
     supabaseSelectUn<LigneJoueur>('players', { id: `eq.${playerId}`, select: '*' }),
     supabaseSelect('config', { select: 'cle,valeur' }),
+    lireEtatLive(),
   ]);
   if (!joueur) return null;
 
@@ -145,5 +149,6 @@ export async function lireEtatJoueur(playerId: string): Promise<EtatJoueur | nul
     perso_actif: persoActif,
     presence_berrys_en_attente: joueur.presence_berrys_en_attente,
     coffres_premium_perso: joueur.coffres_premium_perso,
+    live_en_direct: live.en_direct,
   };
 }

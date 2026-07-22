@@ -42,6 +42,8 @@ export interface EtatJoueur {
   presence_berrys_en_attente: number;
   /** Brique 6 : coffres premium en stock, à ouvrir depuis l'écran Tirage. */
   coffres_premium_perso: number;
+  /** Brique 6 : true si le live est en cours. */
+  live_en_direct: boolean;
 }
 
 export class ErreurAuth extends Error {}

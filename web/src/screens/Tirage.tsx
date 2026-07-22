@@ -467,32 +467,37 @@ export function Tirage({
               </div>
             </button>
 
-            {coffresPremium > 0 ? (
+            {/* Même mise en page que ROLL PERSONNAGE (bandeau titre + coffre + libellé), en
+                violet Twitch. Toujours cliquable dans l'absolu — désactivé seulement à x0,
+                pas caché : le joueur doit voir que ce roll existe même sans stock. */}
+            <div style={{ position: 'relative' }}>
               <button
                 onClick={() => lancer(true)}
-                style={{ width: '100%', background: '#2a1245', border: '4px solid #772ce8', borderRadius: 16, padding: '20px 18px 22px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative', boxShadow: '0 6px 0 #4b1fa0' }}
-              >
-                <div style={{ flex: 1, textAlign: 'left' }}>
-                  <div style={{ font: '400 15px Bangers,Rubik', color: '#fff' }}>Roll premium</div>
-                  <div style={{ font: '700 10px Rubik,Arial', color: '#c9a8ff', marginTop: 4 }}>Meilleurs taux — gagné en live</div>
-                </div>
-                <div style={{
-                  flex: 'none', minWidth: 30, height: 30, padding: '0 6px', borderRadius: 15,
-                  background: 'var(--or)', border: '2px solid #1a1208', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', font: '800 12px Rubik,Arial', color: '#1a1208',
+                disabled={coffresPremium <= 0}
+                style={{
+                  width: '100%', background: '#2a1245', border: '4px solid #1a1208', borderRadius: 18,
+                  padding: 0, overflow: 'hidden', boxShadow: '0 8px 0 rgba(0,0,0,.35)', position: 'relative',
+                  opacity: coffresPremium > 0 ? 1 : 0.55,
                 }}
-                >
-                  x{coffresPremium}
+              >
+                <div style={{ background: '#772ce8', color: '#fff', font: '800 11px Rubik,Arial', letterSpacing: 1, padding: '7px 0' }}>ROLL PERSONNAGE PREMIUM</div>
+                <div style={{ padding: '24px 18px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <CoffreSvg agite={false} />
+                  <div style={{ font: '400 20px Bangers,Rubik', letterSpacing: 1, transform: 'skew(-6deg)', color: '#fff' }}>Nouveau personnage</div>
+                  <div style={{ font: '700 11px Rubik,Arial', color: '#c9a8ff' }}>s'obtient avec les points de chaîne, en live</div>
                 </div>
               </button>
-            ) : (
-              <div style={{ width: '100%', background: '#2a1245', border: '4px solid #1a1208', borderRadius: 16, opacity: 0.55, padding: '20px 18px 22px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
-                <div style={{ flex: 1, textAlign: 'left' }}>
-                  <div style={{ font: '400 15px Bangers,Rubik', color: '#fff' }}>Roll premium</div>
-                  <div style={{ font: '700 10px Rubik,Arial', color: '#c9a8ff', marginTop: 4 }}>🔒 s'obtient avec les points de chaîne, en live</div>
-                </div>
+
+              <div style={{
+                position: 'absolute', top: -10, right: -8, minWidth: 30, height: 30, padding: '0 6px',
+                borderRadius: 15, background: 'var(--or)', border: '2px solid #1a1208', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', font: '800 12px Rubik,Arial', color: '#1a1208',
+                boxShadow: '0 2px 0 #000', zIndex: 1,
+              }}
+              >
+                x{coffresPremium}
               </div>
-            )}
+            </div>
 
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
               <CoffreEquipement

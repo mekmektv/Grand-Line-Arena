@@ -21,13 +21,14 @@ const COULEUR_RARETE: Record<string, string> = {
 
 interface TutoRect { x: number; y: number; w: number; h: number; }
 
-// Valeurs TEST — systèmes pas encore construits (niveau de compte, titre, XP de compte,
-// statut live Twitch). Affichées quand même (visuel fidèle au prototype) en attendant les
-// vraies données des prochaines briques (compte : niveau/XP à définir §3 ; live : Brique 6).
+// Valeurs TEST — systèmes pas encore construits (niveau de compte, titre, XP de compte).
+// Affichées quand même (visuel fidèle au prototype) en attendant que le §3 chiffre le niveau
+// et l'XP de compte. Le statut live, lui, est réel depuis la Brique 6 (etat.live_en_direct).
 const TEST_ACCOUNT_LEVEL = 1;
 const TEST_ACCOUNT_TITRE = 'Moussaillon';
 const TEST_ACCOUNT_XP_PCT = 35;
-const TEST_STREAMER_NAME = 'TonChaîne';
+const NOM_CHAINE_TWITCH = 'Mekmek_tv';
+const URL_CHAINE_TWITCH = `https://twitch.tv/${NOM_CHAINE_TWITCH.toLowerCase()}`;
 
 // §8 point 2 : l'écran le plus vu (80 % du temps). Reprend fidèlement le prototype validé
 // (bandeau océan animé, badges, panneau Berrys/énergie, tutoriel guidé 2 étapes).
@@ -262,26 +263,38 @@ export function Accueil({
           ⚔️ COMBATTRE
         </button>
 
-        {/* Bandeau live. Le statut "en direct" lui-même reste TEST (pas encore branché), mais
-            le rond de présence (Brique 6, faite) est réel : Berrys en attente, jamais crédités
-            automatiquement — le joueur clique pour les récupérer (§3 GAME_DESIGN). */}
+        {/* Bandeau live (Brique 6). Ouvre la vraie chaîne dans un nouvel onglet ; le texte change
+            selon etat.live_en_direct (mis à jour par stream.online/.offline EventSub) — pas de
+            second bandeau séparé, juste un contenu différent pour ne pas dupliquer le style. */}
         <div style={{ position: 'relative' }}>
           <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            title="Statut live réel : Brique 6"
+            href={URL_CHAINE_TWITCH}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
-              textDecoration: 'none', background: 'linear-gradient(135deg,#3a1d6e,#9146ff)',
-              border: '2px solid #772ce8', borderRadius: 10, padding: 12, display: 'flex',
-              alignItems: 'center', gap: 10, boxShadow: '0 4px 0 #4b1fa0',
+              textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10,
+              borderRadius: 10, padding: 12, boxShadow: etat.live_en_direct ? '0 4px 0 #7a1f2b' : '0 4px 0 #4b1fa0',
+              background: etat.live_en_direct
+                ? 'linear-gradient(135deg,#6e1d2a,#e91e3c)'
+                : 'linear-gradient(135deg,#3a1d6e,#9146ff)',
+              border: `2px solid ${etat.live_en_direct ? '#ff4d5e' : '#772ce8'}`,
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" style={{ flex: 'none' }}>
               <path fill="#fff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
             </svg>
             <div style={{ flex: 1, font: "700 11px/1.35 Rubik,Arial", color: '#fff', textAlign: 'left' }}>
-              Ne manque pas les lives de <b>{TEST_STREAMER_NAME}</b> !<br />
-              <span style={{ opacity: 0.85, fontWeight: 600 }}>En direct : +40 Berrys / 30 min + des tirages premium.</span>
+              {etat.live_en_direct ? (
+                <>
+                  🔴 <b>{NOM_CHAINE_TWITCH}</b> est EN DIRECT !<br />
+                  <span style={{ opacity: 0.85, fontWeight: 600 }}>Rejoins le chat : +40 Berrys / 30 min + des tirages premium.</span>
+                </>
+              ) : (
+                <>
+                  Ne manque pas les lives de <b>{NOM_CHAINE_TWITCH}</b> !<br />
+                  <span style={{ opacity: 0.85, fontWeight: 600 }}>En direct : +40 Berrys / 30 min + des tirages premium.</span>
+                </>
+              )}
             </div>
             <span style={{ flex: 'none', font: '900 18px Rubik,Arial', color: 'var(--or)' }}>›</span>
           </a>

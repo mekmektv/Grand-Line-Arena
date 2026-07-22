@@ -456,7 +456,72 @@ fois** (sélecteur en haut) avec ses 2 slots — jamais la liste de tous les per
 | Bits | ✅ | `channel.cheer` |
 | Raids / follows / hype train | ✅ | EventSub |
 
-**Technique :** OAuth une fois sur la chaîne + **EventSub en WebSocket** (pas besoin d'URL publique).
+**Technique historique :** OAuth une fois sur la chaîne + EventSub. *(Le choix WebSocket évoqué
+initialement a été abandonné — voir §5bis : le backend tourne en fonction Vercel serverless,
+qui ne peut pas tenir une connexion permanente.)*
+
+---
+
+## 5bis. TWITCH EN LIVE — CE QUI EST CONSTRUIT *(fait le 22/07/2026)*
+
+Présence et coffre premium sont en production. Le duel entre viewers (et son annonce dans le
+chat) reste à concevoir — mis de côté volontairement.
+
+### Présence → Berrys
+
+- Sondée par un **cron externe** (cron-job.org, appel `GET /api/cron/presence?cle=...` toutes
+  les **1 min**) plutôt qu'une boucle interne : le Vercel Cron gratuit ne permet qu'un
+  déclenchement par jour, insuffisant ici.
+- Le cron interroge **Get Chatters**, qui inclut déjà les lurkers connectés au chat (silencieux).
+  **Limite acceptée** : aucune API Twitch n'expose qui regarde le stream chat fermé — Get
+  Chatters est le maximum atteignable.
+- +40 Berrys par tranche de 30 min de présence détectée, +20 une fois par live à la première
+  détection (chiffres du §3, inchangés).
+- **Jamais crédités automatiquement** (décidé le 22/07/2026) : ils s'accumulent dans un compteur
+  "en attente" que le joueur encaisse lui-même en cliquant sur le rond du bandeau Twitch de
+  l'accueil. Voulu : le joueur voit et déclenche le gain, plutôt qu'un solde qui bouge tout seul.
+
+### Coffre premium
+
+- **Uniquement le tirage perso** (pas l'équipement) — décidé le 22/07/2026 pour rester simple.
+- Custom Reward Twitch **"Tirage premium — personnage"**, **1000 points de chaîne**, limité à
+  **1 par viewer et par stream** (réglage natif Twitch `max_per_user_per_stream`, pas une règle
+  côté serveur).
+- Taux du tirage premium (même pool de persos, meilleurs taux, jamais de contenu exclusif) :
+
+  | Rareté | Normal | Premium |
+  |---|---|---|
+  | Commun | 70 % | 41 % |
+  | Peu commun | 22 % | 36 % |
+  | Rare | 7,5 % | 21 % |
+  | Épique | 0,5 % | 2 % |
+
+  Épique volontairement plafonné à 2 % (une première proposition à 5 % a été jugée trop
+  généreuse) — clés `drop_rate_premium_*` en config.
+- Crédité dans `players.coffres_premium_perso` par le webhook EventSub sur la redemption
+  (identifiée par le TITRE de la récompense, pas son id — rien à stocker de généré côté serveur).
+- Bouton "ROLL PERSONNAGE PREMIUM" sur l'écran Coffres : même mise en page que le roll normal,
+  en violet, **toujours visible avec un compteur rond (x0 inclus)** — jamais caché à zéro,
+  seulement désactivé.
+- Si le viewer qui cachète n'a jamais de compte lié à ce `twitch_id` dans le jeu, la récompense
+  est perdue (limite acceptée : il faut déjà avoir joué pour dépenser des points sur ce canal).
+
+### Autorisation technique
+
+Deux jetons OAuth différents, à ne pas confondre :
+- Le **login joueur** normal (§3), sans scope, jamais stocké.
+- Un jeton **broadcaster** séparé (`/auth/twitch/streamer/login`, une seule fois, scopes
+  `moderator:read:chatters channel:read:redemptions channel:manage:redemptions`), stocké en
+  base avec son refresh token — c'est lui qui lit les chatters et crée la récompense.
+- La création de l'abonnement EventSub, elle, exige un **jeton d'application** (client
+  credentials), pas le jeton broadcaster — piège Twitch découvert en configurant : message
+  d'erreur *"auth must use app access token to create webhook subscription"*.
+
+### Statut live à l'écran
+
+Le bandeau Twitch de l'accueil est un vrai lien cliquable vers la chaîne, avec deux textes selon
+`stream.online`/`.offline` (EventSub) : violet "Ne manque pas les lives de..." hors live, rouge
+"🔴 EN DIRECT" pendant.
 
 ---
 
@@ -466,31 +531,23 @@ fois** (sélecteur en haut) avec ses 2 slots — jamais la liste de tous les per
 |---|---|---|
 | **Frontend** (webapp) | Ce que le viewer voit | **Vercel** *(pas encore déployé — tourne en local, React + Vite)* |
 | **Base de données + login** | Comptes, persos, collection, niveaux, Berrys | **Supabase** ✅ en place |
-| **Backend permanent** | Calcule les combats + gacha + écoute Twitch (EventSub 24/7) | **Railway** *(pas encore déployé — tourne en local, `node:http` sans framework)* |
+| **Backend** | Calcule les combats + gacha + écoute Twitch (EventSub) | **Vercel** ✅ — fonction serverless, PAS Railway (voir note ci-dessous) |
 
-**Pourquoi 3 briques :** le backend doit tourner **en continu** pour écouter Twitch et compter la présence.
+⚠️ **Le plan "3 briques" ci-dessus est dépassé** : le backend tourne finalement en **fonction
+Vercel serverless**, pas sur un process permanent (Railway). Une fonction Vercel ne tient pas de
+connexion continue, ce qui a changé deux choix pour la Brique 6 (voir plus bas) : EventSub en
+**webhook** plutôt qu'en WebSocket, et la présence sondée par un **cron externe** (cron-job.org)
+plutôt qu'une boucle interne au serveur.
 
-### État réel *(mis à jour le 20/07/2026)*
+### État réel *(mis à jour le 22/07/2026)*
 
-Fait : DB + config (Brique 1), moteur de combat (Brique 2), login Twitch + onboarding avec un
-login de secours sans Twitch en attendant l'app officielle (Brique 3), gacha (Brique 4), tous
-les écrans + l'affichage de combat (Brique 5), **XP des persos, recharge quotidienne d'énergie,
-remise à zéro hebdomadaire des changements, anti-frustration du matchmaking, recyclage manuel**.
+Fait : DB + config (Brique 1), moteur de combat (Brique 2), login Twitch + onboarding (Brique 3),
+gacha (Brique 4), tous les écrans + l'affichage de combat (Brique 5), XP des persos, recharge
+d'énergie, matchmaking, recyclage, quêtes, équipement, prime au classement, **et la Brique 6
+partiellement : présence en live + coffre premium (détail au §5bis)**.
 
-**Les 3 bloquants avant d'ouvrir aux viewers :**
-
-1. ~~L'énergie ne se rechargeait jamais (10 combats à vie par joueur)~~ — **réglé le 20/07/2026.**
-2. **`DEV_AUTH_ENABLED=true`.** `GET /auth/dev/login?pseudo=X` crée une session sans aucune
-   vérification : en production, n'importe qui se fabrique des comptes. Il faut créer l'app sur
-   `dev.twitch.tv`, remplir `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET`, et passer ce drapeau
-   à `false`. Le code OAuth existe déjà et n'attend que les clés.
-3. **Rien n'est déployé** (tout tourne en local). Cible : Vercel + Railway.
-   → **Déployer AVANT la Brique 6, pas après.** Le déploiement casse toujours les mêmes choses
-   d'un coup (CORS, cookies, https, URL de redirection) ; les découvrir en même temps qu'un
-   débogage d'EventSub rend le diagnostic impossible.
-
-Reste ensuite : Twitch en live (Brique 6 — EventSub, présence, points de chaîne, et l'annonce
-des tirages Épiques dans le chat).
+Reste dans la Brique 6 : le duel entre viewers et l'annonce dans le chat quand l'un bat l'autre
+— **mise de côté**, le duel lui-même n'est pas encore conçu.
 
 **Routes du backend (server/src/server.ts) :** `GET/POST /auth/twitch/*`, `GET /auth/dev/login`
 *(dev uniquement)*, `GET /me`, `GET /etat`, `GET /collection`, `POST /perso-actif`, `POST /tirage`,
@@ -700,7 +757,7 @@ simple édition de `quetes_catalogue`. Ils ne sont pas encore passés par une si
 
 ## 9. ROADMAP
 
-**Cœur (d'abord) :** DB ✅ → login Twitch ✅ *(login de secours en attendant l'app officielle)* → gacha/roll ✅ → collection ✅ → perso actif ✅ → combat 1v1 (classes + passifs) ✅ → connexion Twitch live ⬜ **(seule brique du cœur qui reste)**.
+**Cœur (d'abord) :** DB ✅ → login Twitch ✅ *(login de secours en attendant l'app officielle)* → gacha/roll ✅ → collection ✅ → perso actif ✅ → combat 1v1 (classes + passifs) ✅ → connexion Twitch live ✅ *(présence + coffre premium faits, §5bis — duel/annonce chat restant, mis de côté)*.
 
 **Ensuite :** recyclage *(fait, automatique au tirage)* · Berrys/économie ✅ · énergie ✅ · équipement (PV/Attack) ⬜ · compétences uniques ✅ · transformations ✅ · classement *(fait, version simplifiée triée par Berrys)* · quêtes ✅ *(§8bis)*.
 
