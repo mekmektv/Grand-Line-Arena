@@ -38,6 +38,10 @@ export interface EtatJoueur {
   /** Ce que coûtera le prochain changement de perso. 0 = encore gratuit (§3). */
   prochain_changement_cout: number;
   perso_actif: PersoActif | null;
+  /** Brique 6 : Berrys de présence live pas encore encaissés (le joueur clique pour les récupérer). */
+  presence_berrys_en_attente: number;
+  /** Brique 6 : coffres premium en stock, à ouvrir depuis l'écran Tirage. */
+  coffres_premium_perso: number;
 }
 
 export class ErreurAuth extends Error {}
@@ -134,6 +138,22 @@ export async function tirerPerso(): Promise<ResultatTirage> {
   const corps = await res.json();
   if (!res.ok) throw new Error(corps.erreur ?? `POST /tirage → ${res.status}`);
   return corps;
+}
+
+/** Brique 6 : ouvre un coffre premium (stock gagné via points de chaîne). Même forme de
+ *  résultat qu'un tirage normal, meilleurs taux. */
+export async function ouvrirCoffrePremium(): Promise<ResultatTirage> {
+  const res = await fetch(`${API_URL}/tirage/premium`, { method: 'POST', credentials: 'include' });
+  const corps = await res.json();
+  if (!res.ok) throw new Error(corps.erreur ?? `POST /tirage/premium → ${res.status}`);
+  return corps;
+}
+
+/** Brique 6 : encaisse les Berrys de présence en attente vers le solde réel. */
+export async function encaisserPresence(): Promise<{ berrys: number }> {
+  const res = await fetch(`${API_URL}/presence/encaisser`, { method: 'POST', credentials: 'include' });
+  if (!res.ok) throw new Error(`POST /presence/encaisser → ${res.status}`);
+  return res.json();
 }
 
 /** Le tirage de départ : Commun garanti, gratuit. Même forme de résultat qu'un tirage

@@ -30,7 +30,7 @@ let erreurs = 0;
 // ---------------------------------------------------------------------------
 console.log(`\n=== VALIDATION TIRAGE — ${N.toLocaleString('fr-FR')} tirages ===\n`);
 
-const taux = tauxParPerso(persos, config);
+const taux = tauxParPerso(persos, config.drop_rates);
 console.log('--- Taux théorique par perso (config / nb de persos du tier) ---');
 for (const [p, t] of taux) {
   console.log(`  ${p.nom.padEnd(12)} ${p.rarete.padEnd(12)} ${(t * 100).toFixed(2)} %`);

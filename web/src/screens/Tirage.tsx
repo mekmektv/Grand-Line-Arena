@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
-  tirerPerso, tirerPremierPerso, tirerCoffreOffert, recyclerPerso,
+  tirerPerso, tirerPremierPerso, tirerCoffreOffert, ouvrirCoffrePremium, recyclerPerso,
   type ResultatTirage, type CarteCollection, type EtatEquipement,
 } from '../api';
 import { Berry } from '../components/Berry';
@@ -248,10 +248,12 @@ export interface OnboardingTirage {
 }
 
 export function Tirage({
-  berrys, catalogue, equipement, persoActifId, persoActifNom, onIncarnerDepuisTirage, onEtatChange,
+  berrys, coffresPremium, catalogue, equipement, persoActifId, persoActifNom, onIncarnerDepuisTirage, onEtatChange,
   onboarding = null,
 }: {
   berrys: number;
+  /** Brique 6 : coffres premium en stock (gagnés via points de chaîne). */
+  coffresPremium: number;
   /** Tout le catalogue (possédé ou non) — sert à peupler la roulette. Vient de /collection. */
   catalogue: CarteCollection[];
   /** §4ter : inventaire, pièces et prix du coffre. null tant que /equipement n'a pas répondu. */
@@ -306,7 +308,7 @@ export function Tirage({
     setEtat('revele');
   }, [etat, calculerDecalageFinal]);
 
-  const lancer = async () => {
+  const lancer = async (premium = false) => {
     setMessageRecyclage(null);
     setDecalage(0);
     setDureeDefile(0);
@@ -314,9 +316,10 @@ export function Tirage({
 
     let r: ResultatTirage;
     try {
-      // Trois routes, une seule animation : le serveur décide du perso dans les trois cas,
+      // Quatre routes, une seule animation : le serveur décide du perso dans tous les cas,
       // le front ne fait que rejouer le résultat.
-      if (onboarding?.variante === 'premier') r = await tirerPremierPerso();
+      if (premium) r = await ouvrirCoffrePremium();
+      else if (onboarding?.variante === 'premier') r = await tirerPremierPerso();
       else if (onboarding?.variante === 'coffre-offert') r = await tirerCoffreOffert();
       else r = await tirerPerso();
     } catch (e) {
@@ -428,7 +431,7 @@ export function Tirage({
           </div>
 
           <button
-            onClick={lancer}
+            onClick={() => lancer()}
             style={{ width: '100%', background: '#5c3a1a', border: '4px solid #1a1208', borderRadius: 18, padding: 0, overflow: 'hidden', boxShadow: '0 8px 0 rgba(0,0,0,.35)', marginTop: 6 }}
           >
             <div style={{ padding: '26px 18px 30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -452,7 +455,7 @@ export function Tirage({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18, width: '100%', position: 'relative', flex: 1, justifyContent: 'center' }}>
             <button
-              onClick={lancer}
+              onClick={() => lancer()}
               disabled={berrys < 100}
               style={{ width: '100%', background: '#5c3a1a', border: '4px solid #1a1208', borderRadius: 18, padding: 0, overflow: 'hidden', boxShadow: '0 8px 0 rgba(0,0,0,.35)', position: 'relative' }}
             >
@@ -464,12 +467,32 @@ export function Tirage({
               </div>
             </button>
 
-            <div style={{ width: '100%', background: '#2a1245', border: '4px solid #1a1208', borderRadius: 16, opacity: 0.55, padding: '20px 18px 22px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <div style={{ font: '400 15px Bangers,Rubik', color: '#fff' }}>Roll premium</div>
-                <div style={{ font: '700 10px Rubik,Arial', color: '#c9a8ff', marginTop: 4 }}>🔒 arrive avec les points de chaîne (Brique 6)</div>
+            {coffresPremium > 0 ? (
+              <button
+                onClick={() => lancer(true)}
+                style={{ width: '100%', background: '#2a1245', border: '4px solid #772ce8', borderRadius: 16, padding: '20px 18px 22px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative', boxShadow: '0 6px 0 #4b1fa0' }}
+              >
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ font: '400 15px Bangers,Rubik', color: '#fff' }}>Roll premium</div>
+                  <div style={{ font: '700 10px Rubik,Arial', color: '#c9a8ff', marginTop: 4 }}>Meilleurs taux — gagné en live</div>
+                </div>
+                <div style={{
+                  flex: 'none', minWidth: 30, height: 30, padding: '0 6px', borderRadius: 15,
+                  background: 'var(--or)', border: '2px solid #1a1208', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', font: '800 12px Rubik,Arial', color: '#1a1208',
+                }}
+                >
+                  x{coffresPremium}
+                </div>
+              </button>
+            ) : (
+              <div style={{ width: '100%', background: '#2a1245', border: '4px solid #1a1208', borderRadius: 16, opacity: 0.55, padding: '20px 18px 22px', display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ font: '400 15px Bangers,Rubik', color: '#fff' }}>Roll premium</div>
+                  <div style={{ font: '700 10px Rubik,Arial', color: '#c9a8ff', marginTop: 4 }}>🔒 s'obtient avec les points de chaîne, en live</div>
+                </div>
               </div>
-            </div>
+            )}
 
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
               <CoffreEquipement

@@ -28,6 +28,17 @@ export const env = {
   get frontendUrl() { return process.env.FRONTEND_URL ?? 'http://localhost:5173'; },
   /** Active `/auth/dev/login` (connexion sans Twitch, pour développer avant d'avoir l'app Twitch). */
   get devAuthEnabled() { return process.env.DEV_AUTH_ENABLED === 'true'; },
+
+  // Brique 6 : autorisation Twitch DU STREAMER (scopes élevés), distincte du login joueur.
+  /** Protège /auth/twitch/streamer/login — sans ça, n'importe qui pourrait écraser le jeton
+   *  broadcaster avec le sien (voir server/README.md, section "Brique 6"). */
+  get twitchStreamerSecret() { return lire('TWITCH_STREAMER_SECRET'); },
+  /** Signe les notifications EventSub entrantes ; sert à vérifier qu'elles viennent bien de
+   *  Twitch avant d'y donner suite (webhook public, donc appelable par n'importe qui). */
+  get twitchEventsubSecret() { return lire('TWITCH_EVENTSUB_SECRET'); },
+  /** Protège /cron/presence, appelée par un service externe (cron-job.org) toutes les 1 min —
+   *  route publique, sans ça n'importe qui pourrait la déclencher à volonté. */
+  get cronSecret() { return lire('CRON_SECRET'); },
 };
 
 /**

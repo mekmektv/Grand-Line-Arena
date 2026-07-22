@@ -23,7 +23,7 @@ export type { LigneCharacter, LigneConfig } from './config.ts';
 export { budgetEffectif, calculerStats, statsEngage } from './stats.ts';
 export type { Stats } from './stats.ts';
 export { creerRng, seedAleatoire } from './rng.ts';
-export { tauxParPerso, tirer, tirerCommunGaranti, accepterRecyclage } from './gacha.ts';
+export { tauxParPerso, tirer, tirerPremium, tirerCommunGaranti, accepterRecyclage } from './gacha.ts';
 export type { ResultatTirage } from './gacha.ts';
 export {
   ouvrirCoffre, recyclerObjet, bonusEquipement, budgetObjet, sacrificesPossibles,

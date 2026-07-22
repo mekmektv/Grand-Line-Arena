@@ -9,7 +9,7 @@
 // de `config` (chargée par config.ts). Si une clé manque, chargerConfig() plante déjà —
 // ce fichier n'a donc jamais à deviner une valeur.
 
-import type { Config, Perso } from './types.ts';
+import type { Config, Perso, Rarete } from './types.ts';
 import { creerRng, seedAleatoire } from './rng.ts';
 
 // ---------------------------------------------------------------------------
@@ -19,20 +19,24 @@ import { creerRng, seedAleatoire } from './rng.ts';
 /**
  * Le taux de tirage de CHAQUE perso, individuellement.
  * §3bis : le taux d'un tier se PARTAGE entre ses persos (7,5 % Rare ÷ 5 persos = 1,5 % chacun).
- * Un perso d'une rareté sans clé de taux en config (Légendaire, aujourd'hui) n'a pas d'entrée
- * ici : il n'est simplement pas tirable.
+ * Un perso d'une rareté sans clé de taux dans `tauxRarete` n'a pas d'entrée ici : il n'est
+ * simplement pas tirable.
+ *
+ * `tauxRarete` est passé en paramètre (et non lu directement dans `config.drop_rates`) pour que
+ * le tirage premium (Brique 6, `drop_rates_premium`) réutilise exactement ce même partage entre
+ * persos d'un tier, sans dupliquer la logique.
  */
-export function tauxParPerso(persos: Perso[], config: Config): Map<Perso, number> {
+export function tauxParPerso(persos: Perso[], tauxRarete: Partial<Record<Rarete, number>>): Map<Perso, number> {
   const parRarete = new Map<Perso['rarete'], Perso[]>();
   for (const p of persos) {
-    if (config.drop_rates[p.rarete] === undefined) continue; // rareté pas encore tirable
+    if (tauxRarete[p.rarete] === undefined) continue; // rareté pas encore tirable
     if (!parRarete.has(p.rarete)) parRarete.set(p.rarete, []);
     parRarete.get(p.rarete)!.push(p);
   }
 
   const taux = new Map<Perso, number>();
   for (const [rarete, groupe] of parRarete) {
-    const tauxGlobal = config.drop_rates[rarete]!;
+    const tauxGlobal = tauxRarete[rarete]!;
     const tauxUnitaire = tauxGlobal / groupe.length;
     for (const p of groupe) taux.set(p, tauxUnitaire);
   }
@@ -40,10 +44,12 @@ export function tauxParPerso(persos: Perso[], config: Config): Map<Perso, number
 }
 
 /** Tire un perso au hasard selon les taux de `tauxParPerso`. */
-function tirerPersoAleatoire(persos: Perso[], config: Config, rng: () => number): Perso {
-  const taux = tauxParPerso(persos, config);
+function tirerPersoAleatoire(
+  persos: Perso[], tauxRarete: Partial<Record<Rarete, number>>, rng: () => number,
+): Perso {
+  const taux = tauxParPerso(persos, tauxRarete);
   if (taux.size === 0) {
-    throw new Error('gacha : aucun perso tirable — vérifie drop_rates en config et le catalogue characters.');
+    throw new Error('gacha : aucun perso tirable — vérifie les taux de rareté et le catalogue characters.');
   }
 
   const tirage = rng();
@@ -101,7 +107,7 @@ export function tirer(params: {
   }
 
   const seed = params.seed ?? seedAleatoire();
-  const perso = tirerPersoAleatoire(persos, config, creerRng(seed));
+  const perso = tirerPersoAleatoire(persos, config.drop_rates, creerRng(seed));
   const doublon = nomsDejaPossedes.has(perso.nom);
   const berrysApres = berrysDisponibles - cout;
 
@@ -113,6 +119,39 @@ export function tirer(params: {
     changement_perso_actif_gratuit: !doublon,
     berrys_avant: berrysDisponibles,
     berrys_apres: berrysApres,
+  };
+}
+
+export interface ResultatTiragePremium {
+  perso: Perso;
+  seed: number;
+  doublon: boolean;
+  recyclage_propose_berrys: number | null;
+  changement_perso_actif_gratuit: boolean;
+}
+
+/**
+ * Le tirage premium (Brique 6, points de chaîne Twitch) : mêmes persos, `drop_rates_premium`
+ * au lieu de `drop_rates`. Pas de coût en Berrys — il consomme un coffre déjà payé en points
+ * de chaîne (voir twitch-live-api.ts), donc pas de champs berrys_avant/après ici.
+ */
+export function tirerPremium(params: {
+  nomsDejaPossedes: ReadonlySet<string>;
+  persos: Perso[];
+  config: Config;
+  seed?: number;
+}): ResultatTiragePremium {
+  const { nomsDejaPossedes, persos, config } = params;
+  const seed = params.seed ?? seedAleatoire();
+  const perso = tirerPersoAleatoire(persos, config.drop_rates_premium, creerRng(seed));
+  const doublon = nomsDejaPossedes.has(perso.nom);
+
+  return {
+    perso,
+    seed,
+    doublon,
+    recyclage_propose_berrys: doublon ? config.recyclage_doublon[perso.rarete]! : null,
+    changement_perso_actif_gratuit: !doublon,
   };
 }
 

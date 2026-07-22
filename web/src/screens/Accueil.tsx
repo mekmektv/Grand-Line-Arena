@@ -86,7 +86,9 @@ function LigneQueteAccueil({ label, q, onReclamer }: {
   );
 }
 
-export function Accueil({ etat, queteJour, queteSemaine, montrerTuto, onCombattre, onOuvrirQuetes, onReclamer }: {
+export function Accueil({
+  etat, queteJour, queteSemaine, montrerTuto, onCombattre, onOuvrirQuetes, onReclamer, onEncaisserPresence,
+}: {
   etat: EtatJoueur;
   queteJour: QueteAffichee | null;
   queteSemaine: QueteAffichee | null;
@@ -94,6 +96,7 @@ export function Accueil({ etat, queteJour, queteSemaine, montrerTuto, onCombattr
   onCombattre: () => void;
   onOuvrirQuetes: () => void;
   onReclamer: (cle: string) => void;
+  onEncaisserPresence: () => void;
 }) {
   const perso = etat.perso_actif;
 
@@ -259,27 +262,45 @@ export function Accueil({ etat, queteJour, queteSemaine, montrerTuto, onCombattr
           ⚔️ COMBATTRE
         </button>
 
-        {/* Statut live TEST (Brique 6 pas encore construite) — variante "pas en live" du prototype.
-            Remonté juste sous COMBATTRE : le live est l'appel à l'action, il passe avant les quêtes. */}
-        <a
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          title="Statut live réel : Brique 6"
-          style={{
-            textDecoration: 'none', background: 'linear-gradient(135deg,#3a1d6e,#9146ff)',
-            border: '2px solid #772ce8', borderRadius: 10, padding: 12, display: 'flex',
-            alignItems: 'center', gap: 10, boxShadow: '0 4px 0 #4b1fa0',
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" style={{ flex: 'none' }}>
-            <path fill="#fff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-          </svg>
-          <div style={{ flex: 1, font: "700 11px/1.35 Rubik,Arial", color: '#fff', textAlign: 'left' }}>
-            Ne manque pas les lives de <b>{TEST_STREAMER_NAME}</b> !<br />
-            <span style={{ opacity: 0.85, fontWeight: 600 }}>En direct : +40 Berrys / 30 min + des tirages premium.</span>
-          </div>
-          <span style={{ flex: 'none', font: '900 18px Rubik,Arial', color: 'var(--or)' }}>›</span>
-        </a>
+        {/* Bandeau live. Le statut "en direct" lui-même reste TEST (pas encore branché), mais
+            le rond de présence (Brique 6, faite) est réel : Berrys en attente, jamais crédités
+            automatiquement — le joueur clique pour les récupérer (§3 GAME_DESIGN). */}
+        <div style={{ position: 'relative' }}>
+          <a
+            href="#"
+            onClick={(e) => e.preventDefault()}
+            title="Statut live réel : Brique 6"
+            style={{
+              textDecoration: 'none', background: 'linear-gradient(135deg,#3a1d6e,#9146ff)',
+              border: '2px solid #772ce8', borderRadius: 10, padding: 12, display: 'flex',
+              alignItems: 'center', gap: 10, boxShadow: '0 4px 0 #4b1fa0',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" style={{ flex: 'none' }}>
+              <path fill="#fff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+            </svg>
+            <div style={{ flex: 1, font: "700 11px/1.35 Rubik,Arial", color: '#fff', textAlign: 'left' }}>
+              Ne manque pas les lives de <b>{TEST_STREAMER_NAME}</b> !<br />
+              <span style={{ opacity: 0.85, fontWeight: 600 }}>En direct : +40 Berrys / 30 min + des tirages premium.</span>
+            </div>
+            <span style={{ flex: 'none', font: '900 18px Rubik,Arial', color: 'var(--or)' }}>›</span>
+          </a>
+
+          {etat.presence_berrys_en_attente > 0 && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEncaisserPresence(); }}
+              title="Récupérer les Berrys gagnés grâce à ta présence en live"
+              style={{
+                position: 'absolute', top: -10, right: -8, minWidth: 30, height: 30, padding: '0 6px',
+                borderRadius: 15, background: 'var(--or)', border: '2px solid #1a1208', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', font: '800 11px Rubik,Arial', color: '#1a1208',
+                boxShadow: '0 2px 0 #000', cursor: 'pointer', zIndex: 1,
+              }}
+            >
+              +{etat.presence_berrys_en_attente}
+            </button>
+          )}
+        </div>
 
         {/* Encart quêtes : la quête du jour ET la quête de la semaine. Les succès de collection
             ne sont QUE dans le panneau complet (ouvert via "Voir tout"). */}

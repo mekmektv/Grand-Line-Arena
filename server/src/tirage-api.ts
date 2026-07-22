@@ -13,7 +13,9 @@ import { supabaseSelect, supabaseSelectUn, supabaseInsert, supabaseUpdate } from
 import { urlPublique } from './assets.ts';
 import type { Config, Perso } from './types.ts';
 
-interface LigneCharacterAvecId {
+// Exportés pour tirage-premium-api.ts (Brique 6) : même rendu de résultat que le tirage
+// normal, la révélation en cascade de l'écran de tirage ne doit pas se comporter différemment.
+export interface LigneCharacterAvecId {
   id: number;
   nom: string;
   classe: string;
@@ -54,7 +56,7 @@ export interface ResultatTiragePersiste {
 
 /** Assemble la réponse envoyée au front. Commun aux deux tirages, pour que la révélation
  *  en cascade de l'écran de tirage se comporte exactement pareil dans les deux cas. */
-function construireResultat(
+export function construireResultat(
   perso: Perso,
   ligne: LigneCharacterAvecId,
   config: Config,

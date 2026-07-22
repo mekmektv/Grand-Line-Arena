@@ -5,7 +5,12 @@
 //
 // Routes :
 //   GET  /auth/twitch/login     → redirige vers l'écran d'autorisation Twitch
-//   GET  /auth/twitch/callback  → échange le code, crée/retrouve le joueur, pose le cookie
+//   GET  /auth/twitch/streamer/login → autorisation DU STREAMER, scopes élevés (Brique 6, ?cle=...)
+//   GET  /auth/twitch/callback  → échange le code ; joueur (cookie) OU streamer (jeton stocké)
+//   POST /webhooks/twitch/eventsub → notifications Twitch (redemption, stream online/offline)
+//   GET  /cron/presence         → appelée par un cron externe toutes les 1 min (?cle=...)
+//   POST /tirage/premium        → ouvre un coffre premium (consomme le stock, meilleurs taux)
+//   POST /presence/encaisser    → encaisse les Berrys de présence en attente
 //   GET  /me                    → l'état du joueur connecté (lit le cookie de session)
 //   GET  /etat                  → l'écran Accueil (perso actif, Berrys, énergie)
 //   GET  /collection            → le catalogue complet (possédés + verrouillés)
@@ -29,8 +34,16 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomBytes } from 'node:crypto';
 import { env, verifierEnvAuDemarrage } from './env.ts';
 import {
-  creerCookieSession, lireCookieSession, parserCookies, NOM_COOKIE_SESSION, NOM_COOKIE_STATE,
+  creerCookieSession, lireCookieSession, parserCookies,
+  NOM_COOKIE_SESSION, NOM_COOKIE_STATE, NOM_COOKIE_STATE_STREAMER,
 } from './session.ts';
+import { enregistrerTokenBroadcaster } from './twitch-broadcaster.ts';
+import { verifierSignatureEventsub } from './twitch-eventsub.ts';
+import {
+  crediterCoffrePremium, marquerLiveDemarre, marquerLiveTermine, NOM_RECOMPENSE_TIRAGE_PREMIUM,
+} from './twitch-live-api.ts';
+import { crediterPresenceTousLesChatters, encaisserPresence } from './twitch-presence-api.ts';
+import { ouvrirCoffrePremium } from './tirage-premium-api.ts';
 import { supabaseSelectUn } from './supabase.ts';
 import { lireEtatJoueur } from './etat-joueur.ts';
 import { listerCollection } from './collection.ts';
@@ -48,10 +61,14 @@ import {
 } from './equipement-api.ts';
 import type { PaiementRequete } from './equipement-api.ts';
 
-async function lireCorpsJSON<T>(req: IncomingMessage): Promise<T> {
+async function lireCorpsBrut(req: IncomingMessage): Promise<string> {
   const morceaux: Buffer[] = [];
   for await (const morceau of req) morceaux.push(morceau as Buffer);
-  const texte = Buffer.concat(morceaux).toString('utf8');
+  return Buffer.concat(morceaux).toString('utf8');
+}
+
+async function lireCorpsJSON<T>(req: IncomingMessage): Promise<T> {
+  const texte = await lireCorpsBrut(req);
   return texte ? JSON.parse(texte) : ({} as T);
 }
 
@@ -132,16 +149,44 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       return;
     }
 
+    if (url.pathname === '/auth/twitch/streamer/login' && req.method === 'GET') {
+      // Route d'auto-autorisation DU STREAMER (Brique 6) : scopes élevés que seul le
+      // propriétaire de la chaîne peut accorder, jamais demandés au login joueur normal.
+      // Protégée par un secret en query string — sans ça, n'importe qui pourrait écraser le
+      // jeton broadcaster avec le sien.
+      if (url.searchParams.get('cle') !== env.twitchStreamerSecret) {
+        res.writeHead(403).end('Accès refusé.');
+        return;
+      }
+      const state = randomBytes(16).toString('hex');
+      const params = new URLSearchParams({
+        client_id: env.twitchClientId,
+        redirect_uri: env.twitchRedirectUri,
+        response_type: 'code',
+        scope: 'moderator:read:chatters channel:read:redemptions channel:manage:redemptions',
+        state,
+      });
+      res.setHeader('Set-Cookie', `${NOM_COOKIE_STATE_STREAMER}=${state}; ${cookieAttributs(600)}`);
+      res.writeHead(302, { Location: `${TWITCH_AUTHORIZE_URL}?${params}` }).end();
+      return;
+    }
+
     if (url.pathname === '/auth/twitch/callback' && req.method === 'GET') {
       const code = url.searchParams.get('code');
       const state = url.searchParams.get('state');
       const erreur = url.searchParams.get('error');
 
+      // Même route de retour pour les deux flux (login joueur / autorisation streamer) : ça
+      // évite d'enregistrer une 2e URL de redirection sur dev.twitch.tv. On les distingue par
+      // le cookie state qui correspond, chacun posé par sa propre route de départ.
+      const estFluxStreamer = !!state && state === cookies[NOM_COOKIE_STATE_STREAMER];
+
       if (erreur) {
-        res.writeHead(302, { Location: `${env.frontendUrl}/?login=refuse` }).end();
+        const cible = estFluxStreamer ? 'streamer=refuse' : 'login=refuse';
+        res.writeHead(302, { Location: `${env.frontendUrl}/?${cible}` }).end();
         return;
       }
-      if (!code || !state || state !== cookies[NOM_COOKIE_STATE]) {
+      if (!code || !state || (state !== cookies[NOM_COOKIE_STATE] && !estFluxStreamer)) {
         res.writeHead(400).end('État OAuth invalide ou expiré (rejoue /auth/twitch/login).');
         return;
       }
@@ -161,7 +206,19 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
         res.writeHead(502).end(`Échange de token Twitch échoué : ${tokenRes.status} ${await tokenRes.text()}`);
         return;
       }
-      const { access_token } = (await tokenRes.json()) as { access_token: string };
+      const tokenData = await tokenRes.json() as {
+        access_token: string; refresh_token: string; expires_in: number;
+      };
+
+      if (estFluxStreamer) {
+        await enregistrerTokenBroadcaster(tokenData.access_token, tokenData.refresh_token, tokenData.expires_in);
+        res.setHeader('Set-Cookie', `${NOM_COOKIE_STATE_STREAMER}=; ${cookieAttributs(0)}`);
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' })
+          .end('Autorisation streamer enregistrée avec succès. Tu peux fermer cette page.');
+        return;
+      }
+
+      const { access_token } = tokenData;
 
       const userRes = await fetch(TWITCH_USERS_URL, {
         headers: { Authorization: `Bearer ${access_token}`, 'Client-Id': env.twitchClientId },
@@ -189,6 +246,73 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       ]);
       const suffixe = joueur.nouveau_joueur ? 'bienvenue' : 'ok';
       res.writeHead(302, { Location: `${env.frontendUrl}/?login=${suffixe}` }).end();
+      return;
+    }
+
+    if (url.pathname === '/webhooks/twitch/eventsub' && req.method === 'POST') {
+      // URL PUBLIQUE appelable par n'importe qui : la signature est la SEULE protection, elle
+      // doit être vérifiée avant même de regarder le contenu (voir twitch-eventsub.ts).
+      const messageId = req.headers['twitch-eventsub-message-id'];
+      const timestamp = req.headers['twitch-eventsub-message-timestamp'];
+      const signature = req.headers['twitch-eventsub-message-signature'];
+      const typeMessage = req.headers['twitch-eventsub-message-type'];
+      const corpsBrut = await lireCorpsBrut(req);
+
+      if (typeof messageId !== 'string' || typeof timestamp !== 'string' || typeof signature !== 'string') {
+        res.writeHead(400).end('En-têtes EventSub manquants.');
+        return;
+      }
+      const signatureValide = verifierSignatureEventsub({
+        secret: env.twitchEventsubSecret, messageId, timestamp, corpsBrut, signatureRecue: signature,
+      });
+      if (!signatureValide) { res.writeHead(403).end('Signature invalide.'); return; }
+
+      const corps = JSON.parse(corpsBrut) as {
+        challenge?: string;
+        subscription: { type: string };
+        event?: Record<string, unknown>;
+      };
+
+      // Twitch vérifie que le endpoint est bien vivant en demandant de renvoyer `challenge`
+      // tel quel, une seule fois à la création de l'abonnement.
+      if (typeMessage === 'webhook_callback_verification') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' }).end(corps.challenge ?? '');
+        return;
+      }
+      if (typeMessage === 'revocation') { res.writeHead(200).end(); return; }
+
+      if (typeMessage === 'notification' && corps.event) {
+        switch (corps.subscription.type) {
+          case 'channel.channel_points_custom_reward_redemption.add': {
+            const event = corps.event as { user_id: string; reward: { title: string } };
+            if (event.reward.title === NOM_RECOMPENSE_TIRAGE_PREMIUM) {
+              await crediterCoffrePremium(event.user_id);
+            }
+            break;
+          }
+          case 'stream.online': {
+            const event = corps.event as { broadcaster_user_id: string };
+            await marquerLiveDemarre(event.broadcaster_user_id);
+            break;
+          }
+          case 'stream.offline':
+            await marquerLiveTermine();
+            break;
+        }
+      }
+
+      res.writeHead(200).end();
+      return;
+    }
+
+    if (url.pathname === '/cron/presence' && req.method === 'GET') {
+      // Appelée par un service externe (cron-job.org) toutes les 1 min — Vercel Cron ne permet
+      // qu'un déclenchement par jour sur le plan gratuit, insuffisant ici (Brique 6).
+      if (url.searchParams.get('cle') !== env.cronSecret) { res.writeHead(403).end('Accès refusé.'); return; }
+
+      const resultat = await crediterPresenceTousLesChatters();
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200).end(JSON.stringify(resultat));
       return;
     }
 
@@ -249,6 +373,30 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
         // Le message de tirer() (ex: Berrys insuffisants) est déjà clair pour l'utilisateur.
         res.writeHead(400).end(JSON.stringify({ erreur: (e as Error).message }));
       }
+      return;
+    }
+
+    if (url.pathname === '/tirage/premium' && req.method === 'POST') {
+      const playerId = lireCookieSession(cookies[NOM_COOKIE_SESSION]);
+      if (!playerId) { res.writeHead(401).end(JSON.stringify({ erreur: 'non connecté' })); return; }
+
+      try {
+        const resultat = await ouvrirCoffrePremium(playerId);
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200).end(JSON.stringify(resultat));
+      } catch (e) {
+        res.writeHead(400).end(JSON.stringify({ erreur: (e as Error).message }));
+      }
+      return;
+    }
+
+    if (url.pathname === '/presence/encaisser' && req.method === 'POST') {
+      const playerId = lireCookieSession(cookies[NOM_COOKIE_SESSION]);
+      if (!playerId) { res.writeHead(401).end(JSON.stringify({ erreur: 'non connecté' })); return; }
+
+      const resultat = await encaisserPresence(playerId);
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200).end(JSON.stringify(resultat));
       return;
     }
 

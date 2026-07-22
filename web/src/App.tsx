@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   recupererEtat, recupererCollection, recupererClassement, changerPersoActif, lancerCombat,
-  recupererQuetes, reclamerQuete, recupererEquipement, avancerOnboarding,
+  recupererQuetes, reclamerQuete, recupererEquipement, avancerOnboarding, encaisserPresence,
   ETAPE_PREMIER_TIRAGE, ETAPE_TUTO_ACCUEIL, ETAPE_COFFRE_OFFERT,
   ErreurAuth, type EtatJoueur, type CarteCollection, type Classement as ClassementData,
   type ResultatCombatComplet, type EtatQuetes, type EtatEquipement,
@@ -89,6 +89,12 @@ function App() {
     if (resultat.ok) { rafraichirEtat(); rafraichirQuetes(); }
   }, [rafraichirEtat, rafraichirQuetes]);
 
+  // Brique 6 : le clic sur le rond de présence de l'accueil, jamais automatique (§3 GAME_DESIGN).
+  const encaisser = useCallback(async () => {
+    await encaisserPresence();
+    rafraichirEtat();
+  }, [rafraichirEtat]);
+
   // Un tirage ou un recyclage change à la fois les Berrys (état) et la collection : les deux
   // écrans doivent se resynchroniser, sinon la carte recyclée reste affichée jusqu'au prochain
   // changement d'onglet.
@@ -167,6 +173,7 @@ function App() {
         <div className="pc-frame">
           <Tirage
             berrys={0}
+            coffresPremium={0}
             catalogue={collection ?? []}
             equipement={null}
             persoActifId={null}
@@ -230,6 +237,7 @@ function App() {
             onCombattre={combattre}
             onOuvrirQuetes={() => setQuetesOuvertes(true)}
             onReclamer={reclamer}
+            onEncaisserPresence={encaisser}
           />
           {lancementCombatEnCours && (
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 20 }}>
@@ -260,6 +268,7 @@ function App() {
       contenu = (
         <Tirage
           berrys={etat.berrys}
+          coffresPremium={etat.coffres_premium_perso}
           catalogue={collection ?? []}
           equipement={equipement}
           persoActifId={etat.perso_actif?.collection_id ?? null}

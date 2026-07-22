@@ -60,3 +60,7 @@ export function parserCookies(enteteCookie: string | undefined): Record<string, 
 
 export const NOM_COOKIE_SESSION = 'opa_session';
 export const NOM_COOKIE_STATE = 'opa_oauth_state';
+// Brique 6 : cookie state SÉPARÉ pour l'autorisation streamer, pour que /auth/twitch/callback
+// puisse distinguer les deux flux (login joueur vs autorisation broadcaster) sans rien ajouter
+// à l'URL de redirection déjà enregistrée sur dev.twitch.tv.
+export const NOM_COOKIE_STATE_STREAMER = 'opa_oauth_state_streamer';

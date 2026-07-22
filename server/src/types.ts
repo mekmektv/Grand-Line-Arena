@@ -61,9 +61,18 @@ export interface Config {
   cout_tirage_perso: number;                           // Berrys, un tirage
   recyclage_doublon: Partial<Record<Rarete, number>>;  // Berrys gagnés en recyclant un doublon
 
+  // Brique 6 : tirage premium (points de chaîne Twitch). Même pool de persos que drop_rates,
+  // meilleurs taux — jamais de contenu exclusif (§5bis GAME_DESIGN).
+  drop_rates_premium: Partial<Record<Rarete, number>>;
+
   // §4 : gains de combat.
   gain_combat_gagne: number;  // Berrys si le combat est gagné
   gain_combat_perdu: number;  // Berrys même en perdant (plancher garanti)
+
+  // Brique 6 : présence en live (§3 GAME_DESIGN). Crédités dans un compteur "en attente",
+  // jamais versés automatiquement — le joueur encaisse lui-même depuis l'accueil.
+  gain_presence_tranche: number;      // Berrys par tranche de 30 min de présence détectée
+  gain_bonus_connexion_live: number;  // Berrys, une fois par live, à la première présence détectée
 
   // §3 : progression du perso actif. Les seuils sont des XP CUMULÉS, strictement croissants.
   xp_combat_gagne: number;

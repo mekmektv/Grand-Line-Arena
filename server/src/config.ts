@@ -123,6 +123,20 @@ export function chargerConfig(lignes: LigneConfig[]): Config {
   }
   const cout_tirage_perso = nombre('cout_tirage_perso');
 
+  // Brique 6 : tirage premium (mêmes raretés tirables, taux différents). Même garde-fou que
+  // drop_rates — une somme fausse fait perdre ou gagner des chances silencieusement.
+  const drop_rates_premium = {} as Partial<Record<Rarete, number>>;
+  for (const r of RARETES_TIRAGE) {
+    drop_rates_premium[r] = nombre(`drop_rate_premium_${slug(r)}`);
+  }
+  const sommeTauxPremium = Object.values(drop_rates_premium).reduce((s, v) => s + (v ?? 0), 0);
+  if (Math.abs(sommeTauxPremium - 1) > 0.001) {
+    throw new Error(
+      `config : les drop_rate_premium_* ne totalisent pas 100 % (somme = ${(sommeTauxPremium * 100).toFixed(2)} %). ` +
+      `Un tirage premium perd ou gagne des chances silencieusement — corrige avant de continuer (§5bis GAME_DESIGN).`,
+    );
+  }
+
   /** Une clé jsonb qui doit contenir un tableau de chaînes non vide. */
   const listeTexte = (cle: string): string[] => {
     const v = lire(cle);
@@ -243,10 +257,13 @@ export function chargerConfig(lignes: LigneConfig[]): Config {
     budgets,
     profils,
     drop_rates,
+    drop_rates_premium,
     cout_tirage_perso,
     recyclage_doublon,
     gain_combat_gagne: nombre('gain_combat_gagne'),
     gain_combat_perdu: nombre('gain_combat_perdu'),
+    gain_presence_tranche: nombre('gain_presence_tranche'),
+    gain_bonus_connexion_live: nombre('gain_bonus_connexion_live'),
     xp_combat_gagne: nombre('xp_combat_gagne'),
     xp_combat_perdu: nombre('xp_combat_perdu'),
     xp_niveau_2,

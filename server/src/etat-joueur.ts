@@ -19,6 +19,8 @@ interface LigneJoueur {
   perso_actif_id: number | null;
   derniere_recharge: string;
   derniere_recharge_changements: string | null;
+  presence_berrys_en_attente: number;
+  coffres_premium_perso: number;
 }
 
 interface LigneCollection {
@@ -75,6 +77,12 @@ export interface EtatJoueur {
   /** Ce que coûtera le prochain changement de perso. 0 = encore gratuit (§3). */
   prochain_changement_cout: number;
   perso_actif: PersoActifPourAffichage | null;
+  /** Brique 6 : Berrys de présence live PAS ENCORE encaissés — le joueur clique pour les
+   *  récupérer, jamais crédités automatiquement (§3 GAME_DESIGN). */
+  presence_berrys_en_attente: number;
+  /** Brique 6 : coffres premium en stock (gagnés via points de chaîne), à ouvrir depuis l'écran
+   *  Tirage. */
+  coffres_premium_perso: number;
 }
 
 // ⚠️ Ce module n'est plus en lecture seule : l'écran d'accueil est la porte d'entrée normale du
@@ -135,5 +143,7 @@ export async function lireEtatJoueur(playerId: string): Promise<EtatJoueur | nul
     changements_restants: Math.max(0, recharge.changements_restants),
     prochain_changement_cout: prixProchainChangement(recharge.changements_restants, config),
     perso_actif: persoActif,
+    presence_berrys_en_attente: joueur.presence_berrys_en_attente,
+    coffres_premium_perso: joueur.coffres_premium_perso,
   };
 }

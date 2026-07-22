@@ -45,6 +45,17 @@ insert into config (cle, valeur, description) values
 on conflict (cle) do update set valeur = excluded.valeur, description = excluded.description, updated_at = now();
 
 -- =========================================================
+-- Taux de drop du tirage PREMIUM — Brique 6, points de chaîne Twitch (§5bis GAME_DESIGN.md)
+-- Même pool de persos, meilleurs taux, jamais de contenu exclusif.
+-- =========================================================
+insert into config (cle, valeur, description) values
+  ('drop_rate_premium_commun',      '0.41', 'Taux de tirage premium — rareté Commun'),
+  ('drop_rate_premium_peu_commun',  '0.36', 'Taux de tirage premium — rareté Peu commun'),
+  ('drop_rate_premium_rare',        '0.21', 'Taux de tirage premium — rareté Rare'),
+  ('drop_rate_premium_epique',      '0.02', 'Taux de tirage premium — rareté Épique (se partage si plusieurs Épiques)')
+on conflict (cle) do update set valeur = excluded.valeur, description = excluded.description, updated_at = now();
+
+-- =========================================================
 -- Coût du tirage et récompenses de recyclage (§4 GAME_DESIGN.md)
 -- =========================================================
 insert into config (cle, valeur, description) values
@@ -62,6 +73,12 @@ on conflict (cle) do update set valeur = excluded.valeur, description = excluded
 insert into config (cle, valeur, description) values
   ('gain_combat_gagne', '20', 'Berrys gagnés en gagnant un combat (§4)'),
   ('gain_combat_perdu', '8',  'Berrys gagnés même en perdant, plancher garanti (§4)')
+on conflict (cle) do update set valeur = excluded.valeur, description = excluded.description, updated_at = now();
+
+-- Brique 6 : présence en live (§3 GAME_DESIGN.md), créditée dans un compteur "en attente".
+insert into config (cle, valeur, description) values
+  ('gain_presence_tranche', '40', 'Berrys par tranche de 30 min de présence en live détectée (§3)'),
+  ('gain_bonus_connexion_live', '20', 'Berrys, une fois par live, à la première présence détectée (§3)')
 on conflict (cle) do update set valeur = excluded.valeur, description = excluded.description, updated_at = now();
 
 -- =========================================================
