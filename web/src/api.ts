@@ -342,6 +342,7 @@ export async function recyclerEquipement(equipementId: number): Promise<Resultat
 }
 
 export interface LigneClassement {
+  id: string;
   rang: number; pseudo: string; prime: number; moi: boolean;
   /** Photo de profil Twitch. null pour les comptes de dev, qui n'en ont pas. */
   avatar_url: string | null;
@@ -351,6 +352,25 @@ export interface Classement { top: LigneClassement[]; moi: LigneClassement; }
 export async function recupererClassement(): Promise<Classement> {
   const res = await fetch(`${API_URL}/classement`, { credentials: 'include' });
   if (!res.ok) throw new Error(`GET /classement → ${res.status}`);
+  return res.json();
+}
+
+export interface FichePersoResume { nom: string; classe: string; rarete: string; }
+export interface FicheJoueur {
+  pseudo: string;
+  avatar_url: string | null;
+  rang: number;
+  prime: number;
+  perso_actif: (FichePersoResume & { niveau: number }) | null;
+  perso_favori: (FichePersoResume & { combats: number }) | null;
+  historique: {
+    date: string; adversaire_pseudo: string; victoire: boolean; perso_utilise: string | null;
+  }[];
+}
+
+export async function recupererFicheJoueur(id: string): Promise<FicheJoueur> {
+  const res = await fetch(`${API_URL}/fiche-joueur?id=${encodeURIComponent(id)}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`GET /fiche-joueur → ${res.status}`);
   return res.json();
 }
 

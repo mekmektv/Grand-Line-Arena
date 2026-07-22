@@ -2,14 +2,16 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   recupererEtat, recupererCollection, recupererClassement, changerPersoActif, lancerCombat,
   recupererQuetes, reclamerQuete, recupererEquipement, avancerOnboarding, encaisserPresence,
+  recupererFicheJoueur,
   ETAPE_PREMIER_TIRAGE, ETAPE_TUTO_ACCUEIL, ETAPE_COFFRE_OFFERT,
   ErreurAuth, type EtatJoueur, type CarteCollection, type Classement as ClassementData,
-  type ResultatCombatComplet, type EtatQuetes, type EtatEquipement,
+  type ResultatCombatComplet, type EtatQuetes, type EtatEquipement, type FicheJoueur as FicheJoueurData,
 } from './api';
 import { Login } from './screens/Login';
 import { Accueil } from './screens/Accueil';
 import { Collection } from './screens/Collection';
 import { FichePerso } from './screens/FichePerso';
+import { FicheJoueur } from './screens/FicheJoueur';
 import { Tirage } from './screens/Tirage';
 import { Classement } from './screens/Classement';
 import { Combat } from './screens/Combat';
@@ -28,6 +30,7 @@ function App() {
   const [collection, setCollection] = useState<CarteCollection[] | null>(null);
   const [classement, setClassement] = useState<ClassementData | null>(null);
   const [ficheOuverte, setFicheOuverte] = useState<CarteCollection | null>(null);
+  const [ficheJoueurOuverte, setFicheJoueurOuverte] = useState<FicheJoueurData | null>(null);
   const [combat, setCombat] = useState<ResultatCombatComplet | null>(null);
   const [quetes, setQuetes] = useState<EtatQuetes | null>(null);
   // §4ter : chargé dès la connexion, comme la collection — l'onglet Coffres et l'onglet
@@ -94,6 +97,11 @@ function App() {
     await encaisserPresence();
     rafraichirEtat();
   }, [rafraichirEtat]);
+
+  // §8 point 7 : ouvre la fiche détaillée d'un joueur depuis une ligne du classement.
+  const ouvrirFicheJoueur = useCallback((id: string) => {
+    recupererFicheJoueur(id).then(setFicheJoueurOuverte).catch(() => {});
+  }, []);
 
   // Un tirage ou un recyclage change à la fois les Berrys (état) et la collection : les deux
   // écrans doivent se resynchroniser, sinon la carte recyclée reste affichée jusqu'au prochain
@@ -226,6 +234,8 @@ function App() {
           onIncarner={() => incarner(ficheOuverte.collection_id!)}
         />
       );
+    } else if (ficheJoueurOuverte) {
+      contenu = <FicheJoueur fiche={ficheJoueurOuverte} onRetour={() => setFicheJoueurOuverte(null)} />;
     } else if (onglet === 'accueil') {
       contenu = (
         <>
@@ -287,7 +297,7 @@ function App() {
       );
     } else {
       contenu = classement
-        ? <Classement classement={classement} />
+        ? <Classement classement={classement} onOuvrirFiche={ouvrirFicheJoueur} />
         : <div style={{ padding: 40, textAlign: 'center', color: 'var(--texte)' }}>Chargement…</div>;
     }
   }
@@ -297,7 +307,7 @@ function App() {
       <div className="pc-frame">
         <div className="op-noscroll">{contenu}</div>
         {/* La nav reste HORS de la zone de scroll (comme le prototype), sinon elle défile avec le contenu. */}
-        {afficherNav && !ficheOuverte && !quetesOuvertes && <BottomNav actif={onglet} onChange={setOnglet} />}
+        {afficherNav && !ficheOuverte && !ficheJoueurOuverte && !quetesOuvertes && <BottomNav actif={onglet} onChange={setOnglet} />}
       </div>
     </div>
   );

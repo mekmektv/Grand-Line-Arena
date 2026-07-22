@@ -331,6 +331,9 @@ export async function lancerCombat(playerId: string): Promise<ResultatCombatComp
       adversaire_character_id: adversaire.characterId,
       adversaire_pseudo: adversaire.pseudo,
       adversaire_bot_cle: adversaire.botCle,
+      // Le perso QUE J'AI JOUÉ — nécessaire à la fiche joueur (palmarès, perso favori), qui ne
+      // pouvait rien reconstruire sans ça (voir A_APPLIQUER_fiche_joueur.sql).
+      joueur_a_character_id: collActive.character_id,
     }),
   ]);
 

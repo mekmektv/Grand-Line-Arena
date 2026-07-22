@@ -18,6 +18,7 @@
 //   POST /tirage                → tire un perso (§3bis/§4)
 //   POST /recycler              → recycle un perso possédé contre des Berrys { collection_id }
 //   GET  /classement            → classement des joueurs
+//   GET  /fiche-joueur?id=...   → fiche détaillée d'un joueur (perso actif, favori, historique)
 //   GET  /quetes                → l'état des quêtes du joueur (jour, semaine, collection) (§8)
 //   POST /quetes/reclamer       → réclame la récompense d'une quête accomplie { cle }
 //   GET  /equipement            → inventaire, objets portés, pièces, échanges (§4ter)
@@ -53,6 +54,7 @@ import {
   connecterOuCreerJoueur, avancerOnboarding, ETAPE_COFFRE_OFFERT, ETAPE_TERMINE,
 } from './onboarding.ts';
 import { lireClassement } from './classement.ts';
+import { lireFicheJoueur } from './fiche-joueur.ts';
 import { lancerCombat } from './combat-api.ts';
 import { recyclerPerso } from './recyclage.ts';
 import { lireQuetes, reclamerQuete } from './quetes-api.ts';
@@ -567,6 +569,21 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       const classement = await lireClassement(playerId);
       res.setHeader('Content-Type', 'application/json');
       res.writeHead(200).end(JSON.stringify(classement));
+      return;
+    }
+
+    if (url.pathname === '/fiche-joueur' && req.method === 'GET') {
+      const playerId = lireCookieSession(cookies[NOM_COOKIE_SESSION]);
+      if (!playerId) { res.writeHead(401).end(JSON.stringify({ erreur: 'non connecté' })); return; }
+
+      const idCible = url.searchParams.get('id');
+      if (!idCible) { res.writeHead(400).end(JSON.stringify({ erreur: 'id manquant' })); return; }
+
+      const fiche = await lireFicheJoueur(idCible);
+      if (!fiche) { res.writeHead(404).end(JSON.stringify({ erreur: 'joueur introuvable' })); return; }
+
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200).end(JSON.stringify(fiche));
       return;
     }
 

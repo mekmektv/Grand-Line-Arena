@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { urlLoginTwitch, urlLoginDev } from '../api';
+import { urlLoginTwitch } from '../api';
 
 const IconeTwitch = ({ taille = 22 }: { taille?: number }) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" style={{ flex: 'none' }}>
@@ -13,8 +12,6 @@ const IconeTwitch = ({ taille = 22 }: { taille?: number }) => (
 // §8 GAME_DESIGN.md point 1 : "un seul bouton Se connecter avec Twitch". Reprend fidèlement
 // le visuel du prototype validé (dégradé océan, soleil, titre Bangers).
 export function Login() {
-  const [pseudo, setPseudo] = useState('');
-
   return (
     <div style={{
       minHeight: '100%', display: 'flex', flexDirection: 'column', position: 'relative',
@@ -57,30 +54,6 @@ export function Login() {
           <IconeTwitch />
           <span style={{ transform: 'skew(6deg)', display: 'inline-block' }}>SE CONNECTER AVEC TWITCH</span>
         </a>
-
-        <div style={{
-          marginTop: 20, padding: 14, border: '1px dashed rgba(255,255,255,.4)', borderRadius: 10,
-          display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 260,
-        }}
-        >
-          <span style={{ fontSize: 11, opacity: 0.75 }}>Dev only — en attendant l'app Twitch</span>
-          <input
-            value={pseudo}
-            onChange={(e) => setPseudo(e.target.value)}
-            placeholder="Ton pseudo"
-            style={{ padding: 10, borderRadius: 8, border: 'none', background: 'rgba(0,0,0,.25)', color: '#fff' }}
-          />
-          <a
-            href={pseudo ? urlLoginDev(pseudo) : undefined}
-            style={{
-              textAlign: 'center', padding: 10, borderRadius: 8,
-              background: pseudo ? 'var(--cyan)' : 'rgba(255,255,255,.15)', color: '#0a2126', textDecoration: 'none',
-              pointerEvents: pseudo ? 'auto' : 'none', fontWeight: 600,
-            }}
-          >
-            Connexion de test
-          </a>
-        </div>
       </div>
     </div>
   );

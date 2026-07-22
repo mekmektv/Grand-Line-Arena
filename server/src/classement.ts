@@ -9,6 +9,9 @@ import { supabaseSelect } from './supabase.ts';
 interface LigneJoueur { id: string; pseudo: string; prime: number; avatar_url: string | null; }
 
 export interface LigneClassement {
+  /** Sert à demander la fiche détaillée de ce joueur (GET /fiche-joueur?id=...) — pas une
+   *  donnée sensible, juste l'identifiant de la ligne `players`. */
+  id: string;
   rang: number; pseudo: string; prime: number; moi: boolean;
   /** Photo de profil Twitch. null pour les comptes de dev, qui n'en ont pas. */
   avatar_url: string | null;
@@ -25,9 +28,10 @@ export async function lireClassement(playerId: string): Promise<Classement> {
   );
 
   const classement: LigneClassement[] = joueurs.map((j, i) => ({
-    rang: i + 1, pseudo: j.pseudo, prime: j.prime, avatar_url: j.avatar_url, moi: j.id === playerId,
+    id: j.id, rang: i + 1, pseudo: j.pseudo, prime: j.prime, avatar_url: j.avatar_url, moi: j.id === playerId,
   }));
 
-  const moi = classement.find((l) => l.moi) ?? { rang: 0, pseudo: '?', prime: 0, avatar_url: null, moi: true };
+  const moi = classement.find((l) => l.moi)
+    ?? { id: playerId, rang: 0, pseudo: '?', prime: 0, avatar_url: null, moi: true };
   return { top: classement.slice(0, 20), moi };
 }
