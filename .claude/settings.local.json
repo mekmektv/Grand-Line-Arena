@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"print\\('checking basic sql file readability'\\)\")",
+      "Bash(grep -n \"^#\\\\{1,3\\\\} \" \"GAME_DESIGN \\(1\\).md\")",
+      "Bash(npm -v)",
+      "Bash(python3 -V)",
+      "Bash(npm ping *)",
+      "Bash(node t.ts)",
+      "Bash(node server/scripts/validation.ts)",
+      "Bash(python3 check_v6.py)",
+      "Bash(time python3 tournoi_v6.py)",
+      "Bash(node server/scripts/_parite_temp.ts)",
+      "Bash(node server/scripts/_sweep_temp.ts)",
+      "Bash(rm server/scripts/_sweep_temp.ts)",
+      "Bash(echo \"--- code de sortie : $? ---\")",
+      "Bash(node server/scripts/_couverture_temp.ts)",
+      "Bash(node server/scripts/_croco_temp.ts)",
+      "Bash(rm server/scripts/_croco_temp.ts)",
+      "Bash(node server/scripts/validation-gacha.ts)",
+      "Bash(node --check server/src/server.ts)",
+      "Bash(node --check server/src/onboarding.ts)",
+      "Bash(node --check server/src/supabase.ts)",
+      "Bash(node --check server/src/session.ts)",
+      "Bash(node --check server/src/env.ts)",
+      "Bash(node server/src/server.ts)"
+    ]
+  }
+}
