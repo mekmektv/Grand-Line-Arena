@@ -163,11 +163,43 @@ qui lisent le seed, pas la base — se sont mis à planter. Une base recréée a
 
 ---
 
-## État au 22/07/2026
+## État au 23/07/2026
 
-**Le jeu est en ligne et jouable.** Base + config, moteur de combat, login Twitch réel, gacha,
-tous les écrans, combat animé, XP des persos, recharge d'énergie, matchmaking complet (§4bis),
-recyclage, quêtes, équipement, onboarding joué par le joueur, prime au classement.
+**Le jeu est en ligne et jouable, sous le nom Grand Line Arena** (renommé le 23/07 — l'ancien
+nom "One Piece Arena" ne doit plus apparaître nulle part, code compris). Base + config, moteur
+de combat, gacha, tous les écrans, combat animé, XP des persos, recharge d'énergie, matchmaking
+complet (§4bis), recyclage, quêtes, équipement, onboarding joué par le joueur, prime au
+classement, fiche joueur détaillée au classement (§8 point 7).
+
+### Connexion — deux chemins désormais (23/07/2026)
+
+Le login n'est plus "un seul bouton Twitch" (§8 point 1 du GAME_DESIGN est dépassé sur ce
+point précis) :
+
+- **Twitch**, toujours mis en avant — seul chemin qui débloque présence live + tirages premium.
+- **Email + mot de passe**, via **Supabase Auth** (pas de hachage maison, pas de dépendance
+  npm — REST brut sur `/auth/v1/*`, voir `supabase-auth.ts`). Sert de porte de secours à un
+  viewer qui ne veut pas connecter Twitch tout de suite. `players.auth_user_id` fait le pont ;
+  notre cookie de session (`session.ts`) reste inchangé, Supabase Auth ne sert qu'à vérifier
+  le mot de passe et envoyer l'email de réinitialisation.
+- **Associer mon Twitch** (bandeau sur l'accueil, visible tant que `compte_lie_twitch` est
+  faux) : un compte email peut lier son Twitch après coup, sans rien perdre. Réutilise
+  `/auth/twitch/callback` avec un 3ᵉ cookie state (`NOM_COOKIE_STATE_LIER`) pour ne pas avoir
+  à enregistrer une 2ᵉ URL de redirection côté Twitch.
+- L'encart "Dev only — Connexion de test" a été **retiré** de l'écran public (la route restait
+  404 en prod de toute façon, juste déroutant pour un viewer). Le login de dev
+  (`/auth/dev/login?pseudo=X`) existe toujours, mais uniquement par URL directe, plus par bouton.
+
+**Piège Supabase Auth déjà payé :** créer un abonnement EventSub Twitch demande un jeton
+d'application (`client_credentials`), pas un jeton utilisateur — sans rapport avec Supabase
+Auth, mais même famille d'erreur ("il faut le bon TYPE de jeton pour le bon endpoint"), déjà
+rencontrée deux fois ce mois-ci (voir aussi Brique 6 plus bas).
+
+### Combat — intro plus lisible (23/07/2026)
+
+L'écran VS affichait `×1,1` sans contexte, et n'affichait **rien du tout** en l'absence
+d'avantage (impossible de vérifier que c'était bien neutre). Remplacé par un matchup toujours
+visible : `"Classe X vs Classe Y — avantage Classe X"` ou `"— neutre"`.
 
 ### Brique 6 (Twitch en live) — présence et coffre premium FAITS
 
@@ -198,15 +230,16 @@ préviendra quand l'attaquer. Pas encore testé en conditions réelles (prochain
 
 ### Reste à faire
 
-- **Sons** — non commencé, repoussé par l'utilisateur.
+- **Sons** — liste arrêtée avec l'utilisateur le 22/07 (musique + coup normal/épée/projectile,
+  esquive, critique, KO, victoire, défaite, spécial, transformation — 11 fichiers). Le
+  branchement code n'est pas encore fait, en attente que l'utilisateur trouve les fichiers
+  (pistes données : Kenney.nl en CC0, Pixabay Audio).
 - **Saisons de prime** — la prime est cumulative, donc les anciens sont mécaniquement
   intouchables. Sans effet à 3 joueurs, mordra quand des viewers arriveront en cours de route.
 - **Quête « ouvrir 1 coffre »** — retirée du catalogue faute d'un compteur de coffres ouverts
   en base (les objets recyclés disparaissent, impossible de les compter après coup).
-- **Encart « Dev only — Connexion de test »** — toujours affiché sur le site public. Le bouton
-  ne fait plus rien (route en 404), mais c'est déroutant pour un viewer.
-- **Fiche joueur détaillée** au classement (palmarès, derniers combats).
-- **Duel entre viewers + annonce dans le chat** — voir ci-dessus.
+- **Duel entre viewers + annonce dans le chat** — mis de côté volontairement (voir Brique 6
+  ci-dessus), le duel lui-même n'est pas encore conçu. L'utilisateur préviendra quand l'attaquer.
 
 ### Décisions structurantes à connaître
 
@@ -252,7 +285,9 @@ impossible.
 ### Base de données
 
 Tout le SQL est appliqué. Fichiers dans `supabase/` : `A_APPLIQUER_recharge.sql`, `_quetes`,
-`_equipement`, `_equipement_2`, `_onboarding`, `_prime_et_bots`.
+`_equipement`, `_equipement_2`, `_onboarding`, `_prime_et_bots`, `_twitch` (Brique 6),
+`_fiche_joueur`, `_compte_local`, `_supabase_auth` (ce dernier remplace le contenu du
+précédent : `mot_de_passe_hash` supprimé, `auth_user_id` ajouté).
 
 ⚠️ **`fights` référence `players` SANS `on delete cascade`** (contrairement à `collection`,
 `equipment`, `quetes_reclamees`). Supprimer un joueur impose d'effacer ses combats d'abord —
