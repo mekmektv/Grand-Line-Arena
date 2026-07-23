@@ -8,8 +8,10 @@
 //   GET  /auth/twitch/streamer/login → autorisation DU STREAMER, scopes élevés (Brique 6, ?cle=...)
 //   GET  /auth/twitch/lier      → associe un Twitch à un compte local déjà connecté
 //   GET  /auth/twitch/callback  → échange le code ; joueur / streamer / association (cookie state)
-//   POST /auth/local/inscription → crée un compte SANS Twitch { pseudo, mot_de_passe }
-//   POST /auth/local/connexion   → connecte un compte local { pseudo, mot_de_passe }
+//   POST /auth/local/inscription → crée un compte SANS Twitch { pseudo, email, mot_de_passe }
+//   POST /auth/local/connexion   → connecte un compte local { email, mot_de_passe }
+//   POST /auth/local/mot-de-passe-oublie → envoie l'email de réinitialisation { email }
+//   POST /auth/local/reinitialiser → pose le nouveau mot de passe { access_token, mot_de_passe }
 //   POST /webhooks/twitch/eventsub → notifications Twitch (redemption, stream online/offline)
 //   GET  /cron/presence         → appelée par un cron externe toutes les 1 min (?cle=...)
 //   POST /tirage/premium        → ouvre un coffre premium (consomme le stock, meilleurs taux)
@@ -42,6 +44,7 @@ import {
   NOM_COOKIE_SESSION, NOM_COOKIE_STATE, NOM_COOKIE_STATE_STREAMER, NOM_COOKIE_STATE_LIER,
 } from './session.ts';
 import { creerCompteLocal, connecterCompteLocal, lierCompteTwitch } from './auth-local.ts';
+import { demanderReinitialisation, reinitialiserMotDePasse } from './supabase-auth.ts';
 import { enregistrerTokenBroadcaster } from './twitch-broadcaster.ts';
 import { verifierSignatureEventsub } from './twitch-eventsub.ts';
 import {
@@ -142,13 +145,15 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
     }
 
     if (url.pathname === '/auth/local/inscription' && req.method === 'POST') {
-      const { pseudo, mot_de_passe } = await lireCorpsJSON<{ pseudo?: string; mot_de_passe?: string }>(req);
-      if (!pseudo || !mot_de_passe) {
-        res.writeHead(400).end(JSON.stringify({ erreur: 'Pseudo et mot de passe requis.' }));
+      const { pseudo, email, mot_de_passe } = await lireCorpsJSON<{
+        pseudo?: string; email?: string; mot_de_passe?: string;
+      }>(req);
+      if (!pseudo || !email || !mot_de_passe) {
+        res.writeHead(400).end(JSON.stringify({ erreur: 'Pseudo, email et mot de passe requis.' }));
         return;
       }
       try {
-        const joueur = await creerCompteLocal(pseudo, mot_de_passe);
+        const joueur = await creerCompteLocal(pseudo, email, mot_de_passe);
         const cookieSession = creerCookieSession(joueur.id);
         res.setHeader('Set-Cookie', `${NOM_COOKIE_SESSION}=${cookieSession}; ${cookieAttributs(30 * 24 * 3600)}`);
         res.setHeader('Content-Type', 'application/json');
@@ -160,13 +165,53 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
     }
 
     if (url.pathname === '/auth/local/connexion' && req.method === 'POST') {
-      const { pseudo, mot_de_passe } = await lireCorpsJSON<{ pseudo?: string; mot_de_passe?: string }>(req);
-      if (!pseudo || !mot_de_passe) {
-        res.writeHead(400).end(JSON.stringify({ erreur: 'Pseudo et mot de passe requis.' }));
+      const { email, mot_de_passe } = await lireCorpsJSON<{ email?: string; mot_de_passe?: string }>(req);
+      if (!email || !mot_de_passe) {
+        res.writeHead(400).end(JSON.stringify({ erreur: 'Email et mot de passe requis.' }));
         return;
       }
       try {
-        const joueur = await connecterCompteLocal(pseudo, mot_de_passe);
+        const joueur = await connecterCompteLocal(email, mot_de_passe);
+        const cookieSession = creerCookieSession(joueur.id);
+        res.setHeader('Set-Cookie', `${NOM_COOKIE_SESSION}=${cookieSession}; ${cookieAttributs(30 * 24 * 3600)}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200).end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(400).end(JSON.stringify({ erreur: (e as Error).message }));
+      }
+      return;
+    }
+
+    if (url.pathname === '/auth/local/mot-de-passe-oublie' && req.method === 'POST') {
+      const { email } = await lireCorpsJSON<{ email?: string }>(req);
+      if (!email) { res.writeHead(400).end(JSON.stringify({ erreur: 'Email requis.' })); return; }
+      try {
+        await demanderReinitialisation(email);
+      } catch { /* on répond OK dans tous les cas, voir demanderReinitialisation */ }
+      // Toujours OK, que l'email existe ou non : sinon la réponse elle-même dirait à
+      // n'importe qui quels emails ont un compte ici.
+      res.setHeader('Content-Type', 'application/json');
+      res.writeHead(200).end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (url.pathname === '/auth/local/reinitialiser' && req.method === 'POST') {
+      const { access_token, mot_de_passe } = await lireCorpsJSON<{
+        access_token?: string; mot_de_passe?: string;
+      }>(req);
+      if (!access_token || !mot_de_passe) {
+        res.writeHead(400).end(JSON.stringify({ erreur: 'Jeton et mot de passe requis.' }));
+        return;
+      }
+      try {
+        const utilisateur = await reinitialiserMotDePasse(access_token, mot_de_passe);
+        const joueur = await supabaseSelectUn<{ id: string }>(
+          'players', { auth_user_id: `eq.${utilisateur.id}`, select: 'id' },
+        );
+        if (!joueur) throw new Error('Compte introuvable côté jeu.');
+
+        // Reconnecte directement : redemander le mot de passe qu'on vient de choisir serait
+        // un aller-retour inutile.
         const cookieSession = creerCookieSession(joueur.id);
         res.setHeader('Set-Cookie', `${NOM_COOKIE_SESSION}=${cookieSession}; ${cookieAttributs(30 * 24 * 3600)}`);
         res.setHeader('Content-Type', 'application/json');

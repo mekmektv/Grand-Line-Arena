@@ -24,6 +24,10 @@ export const env = {
   get twitchRedirectUri() { return lire('TWITCH_REDIRECT_URI'); },
   get supabaseUrl() { return lire('SUPABASE_URL').replace(/\/$/, ''); },
   get supabaseServiceRoleKey() { return lire('SUPABASE_SERVICE_ROLE_KEY'); },
+  /** La clé PUBLIQUE (pas service_role) — Supabase Auth veut qu'on s'en serve pour les
+   *  opérations "en tant qu'utilisateur" (inscription, connexion, reset), même appelées
+   *  depuis le serveur : service_role est réservée au contournement du RLS sur la base. */
+  get supabaseAnonKey() { return lire('SUPABASE_ANON_KEY'); },
   get sessionSecret() { return lire('SESSION_SECRET'); },
   get frontendUrl() { return process.env.FRONTEND_URL ?? 'http://localhost:5173'; },
   /** Active `/auth/dev/login` (connexion sans Twitch, pour développer avant d'avoir l'app Twitch). */

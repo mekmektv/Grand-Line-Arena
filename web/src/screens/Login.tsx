@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { urlLoginTwitch, inscriptionLocale, connexionLocale } from '../api';
+import { urlLoginTwitch, inscriptionLocale, connexionLocale, demanderMotDePasseOublie } from '../api';
 
 const IconeTwitch = ({ taille = 22 }: { taille?: number }) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" style={{ flex: 'none' }}>
@@ -15,24 +15,47 @@ const inputStyle: CSSProperties = {
   font: '600 13px Rubik,Arial',
 };
 
+type ModeLocal = 'inscription' | 'connexion' | 'oubli' | null;
+
 // §8 GAME_DESIGN.md point 1 : le bouton Twitch reste LE choix mis en avant (bonus de présence
-// live + tirages premium réservés à ce chemin). Le pseudo + mot de passe (23/07/2026) est une
-// porte de secours pour un viewer sans Twitch — jamais mélangé au bouton principal, et Twitch
-// reste associable après coup (voir le bandeau "Associer mon Twitch" sur l'accueil).
+// live + tirages premium réservés à ce chemin). L'email + mot de passe (23/07/2026, géré par
+// Supabase Auth) est une porte de secours pour un viewer sans Twitch — jamais mélangé au
+// bouton principal, et Twitch reste associable après coup (bandeau "Associer mon Twitch" sur
+// l'accueil).
 export function Login() {
-  const [modeLocal, setModeLocal] = useState<'inscription' | 'connexion' | null>(null);
+  const [modeLocal, setModeLocal] = useState<ModeLocal>(null);
   const [pseudo, setPseudo] = useState('');
+  const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState('');
+  const [message, setMessage] = useState('');
   const [enCours, setEnCours] = useState(false);
 
+  const changerMode = (mode: ModeLocal) => {
+    setModeLocal(mode);
+    setErreur('');
+    setMessage('');
+  };
+
   const valider = async () => {
-    if (!pseudo.trim() || !motDePasse) { setErreur('Pseudo et mot de passe requis.'); return; }
+    if (modeLocal === 'oubli') {
+      if (!email.trim()) { setErreur('Email requis.'); return; }
+      setEnCours(true);
+      await demanderMotDePasseOublie(email);
+      setEnCours(false);
+      // Message identique que l'email existe ou non (anti-énumération, voir api.ts).
+      setMessage('Si un compte existe avec cet email, un lien de réinitialisation vient d\'être envoyé.');
+      return;
+    }
+
+    if (!email.trim() || !motDePasse) { setErreur('Email et mot de passe requis.'); return; }
+    if (modeLocal === 'inscription' && !pseudo.trim()) { setErreur('Pseudo requis.'); return; }
+
     setEnCours(true);
     setErreur('');
     const resultat = modeLocal === 'inscription'
-      ? await inscriptionLocale(pseudo, motDePasse)
-      : await connexionLocale(pseudo, motDePasse);
+      ? await inscriptionLocale(pseudo, email, motDePasse)
+      : await connexionLocale(email, motDePasse);
     if (resultat.ok) {
       // Rechargement complet : App.tsx relit /etat au montage, pas besoin de dupliquer cette
       // logique ici — exactement ce qui se passe déjà au retour du login Twitch.
@@ -91,10 +114,10 @@ export function Login() {
 
         {modeLocal === null ? (
           <button
-            onClick={() => setModeLocal('connexion')}
+            onClick={() => changerMode('connexion')}
             style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.8)', font: '700 11px Rubik,Arial', textDecoration: 'underline', cursor: 'pointer' }}
           >
-            Pas envie de connecter Twitch tout de suite ? Jouer avec un pseudo
+            Pas envie de connecter Twitch tout de suite ? Jouer avec un email
           </button>
         ) : (
           <div style={{
@@ -103,15 +126,25 @@ export function Login() {
           }}
           >
             <span style={{ fontSize: 11, color: '#fff', opacity: 0.85 }}>
-              {modeLocal === 'inscription' ? 'Nouveau compte (sans Twitch)' : 'Déjà un compte sans Twitch'}
+              {modeLocal === 'inscription' ? 'Nouveau compte (sans Twitch)'
+                : modeLocal === 'oubli' ? 'Mot de passe oublié' : 'Déjà un compte sans Twitch'}
             </span>
-            <input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="Pseudo" style={inputStyle} />
-            <input
-              value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} type="password"
-              placeholder="Mot de passe" style={inputStyle}
-              onKeyDown={(e) => { if (e.key === 'Enter') valider(); }}
-            />
+
+            {modeLocal === 'inscription' && (
+              <input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="Pseudo" style={inputStyle} />
+            )}
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email" style={inputStyle} />
+            {modeLocal !== 'oubli' && (
+              <input
+                value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} type="password"
+                placeholder="Mot de passe" style={inputStyle}
+                onKeyDown={(e) => { if (e.key === 'Enter') valider(); }}
+              />
+            )}
+
             {erreur && <span style={{ fontSize: 11, color: '#ffb4b4' }}>{erreur}</span>}
+            {message && <span style={{ fontSize: 11, color: '#b4ffc8' }}>{message}</span>}
+
             <button
               onClick={valider}
               disabled={enCours}
@@ -120,17 +153,28 @@ export function Login() {
                 background: 'var(--cyan)', color: '#0a2126', fontWeight: 700,
               }}
             >
-              {modeLocal === 'inscription' ? 'Créer le compte' : 'Se connecter'}
+              {modeLocal === 'inscription' ? 'Créer le compte' : modeLocal === 'oubli' ? 'Envoyer le lien' : 'Se connecter'}
             </button>
+
+            {modeLocal === 'connexion' && (
+              <button
+                onClick={() => changerMode('oubli')}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', font: '700 10px Rubik,Arial', textDecoration: 'underline', cursor: 'pointer' }}
+              >
+                Mot de passe oublié ?
+              </button>
+            )}
             <button
-              onClick={() => { setModeLocal(modeLocal === 'inscription' ? 'connexion' : 'inscription'); setErreur(''); }}
+              onClick={() => changerMode(modeLocal === 'inscription' ? 'connexion' : 'inscription')}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', font: '700 10px Rubik,Arial', textDecoration: 'underline', cursor: 'pointer' }}
             >
               {modeLocal === 'inscription' ? 'J\'ai déjà un compte' : 'Créer un nouveau compte'}
             </button>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.6)' }}>
-              Tu pourras associer ton Twitch plus tard, depuis l'accueil.
-            </span>
+            {modeLocal === 'inscription' && (
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,.6)' }}>
+                Tu pourras associer ton Twitch plus tard, depuis l'accueil.
+              </span>
+            )}
           </div>
         )}
       </div>

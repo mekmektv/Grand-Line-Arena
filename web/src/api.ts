@@ -68,23 +68,44 @@ export function urlLierTwitch(): string {
 
 export type ResultatAuthLocale = { ok: true } | { ok: false; erreur: string };
 
-/** Crée un compte SANS Twitch (pseudo + mot de passe). Twitch reste associable après coup
- *  (urlLierTwitch) — expliqué à l'inscription pour que le choix ne semble pas définitif. */
-export async function inscriptionLocale(pseudo: string, motDePasse: string): Promise<ResultatAuthLocale> {
+/** Crée un compte SANS Twitch (pseudo + email + mot de passe, géré par Supabase Auth). Twitch
+ *  reste associable après coup (urlLierTwitch) — expliqué à l'inscription pour que le choix ne
+ *  semble pas définitif. */
+export async function inscriptionLocale(pseudo: string, email: string, motDePasse: string): Promise<ResultatAuthLocale> {
   const res = await fetch(`${API_URL}/auth/local/inscription`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pseudo, mot_de_passe: motDePasse }),
+    body: JSON.stringify({ pseudo, email, mot_de_passe: motDePasse }),
   });
   const corps = await res.json();
   return res.ok ? { ok: true } : { ok: false, erreur: corps.erreur ?? `→ ${res.status}` };
 }
 
-export async function connexionLocale(pseudo: string, motDePasse: string): Promise<ResultatAuthLocale> {
+export async function connexionLocale(email: string, motDePasse: string): Promise<ResultatAuthLocale> {
   const res = await fetch(`${API_URL}/auth/local/connexion`, {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pseudo, mot_de_passe: motDePasse }),
+    body: JSON.stringify({ email, mot_de_passe: motDePasse }),
+  });
+  const corps = await res.json();
+  return res.ok ? { ok: true } : { ok: false, erreur: corps.erreur ?? `→ ${res.status}` };
+}
+
+/** Toujours { ok: true } côté serveur, que l'email existe ou non (anti-énumération). */
+export async function demanderMotDePasseOublie(email: string): Promise<void> {
+  await fetch(`${API_URL}/auth/local/mot-de-passe-oublie`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** `accessToken` vient du fragment #access_token=... de l'email de réinitialisation. */
+export async function reinitialiserMotDePasse(accessToken: string, motDePasse: string): Promise<ResultatAuthLocale> {
+  const res = await fetch(`${API_URL}/auth/local/reinitialiser`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ access_token: accessToken, mot_de_passe: motDePasse }),
   });
   const corps = await res.json();
   return res.ok ? { ok: true } : { ok: false, erreur: corps.erreur ?? `→ ${res.status}` };

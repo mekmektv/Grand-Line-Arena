@@ -8,6 +8,7 @@ import {
   type ResultatCombatComplet, type EtatQuetes, type EtatEquipement, type FicheJoueur as FicheJoueurData,
 } from './api';
 import { Login } from './screens/Login';
+import { ReinitialiserMotDePasse } from './screens/ReinitialiserMotDePasse';
 import { Accueil } from './screens/Accueil';
 import { Collection } from './screens/Collection';
 import { FichePerso } from './screens/FichePerso';
@@ -25,6 +26,13 @@ type Statut =
   | { type: 'erreur'; message: string };
 
 function App() {
+  // Le lien de réinitialisation Supabase Auth redirige vers le site avec #access_token=...
+  // &type=recovery dans l'URL — capturé une seule fois au montage, avant toute autre logique
+  // (pas de session à ce stade, ça n'a rien à voir avec le login normal).
+  const [jetonReinitialisation] = useState<string | null>(() => {
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    return fragment.get('type') === 'recovery' ? fragment.get('access_token') : null;
+  });
   const [statut, setStatut] = useState<Statut>({ type: 'chargement' });
   const [onglet, setOnglet] = useState<Onglet>('accueil');
   const [collection, setCollection] = useState<CarteCollection[] | null>(null);
@@ -170,6 +178,16 @@ function App() {
     rafraichirEtat();
     rafraichirQuetes();
   };
+
+  if (jetonReinitialisation) {
+    return (
+      <div className="pc-stage">
+        <div className="pc-frame">
+          <ReinitialiserMotDePasse accessToken={jetonReinitialisation} />
+        </div>
+      </div>
+    );
+  }
 
   // §8 : le combat est plein écran, en dehors de la nav du bas — priorité d'affichage absolue.
   if (combat) {
