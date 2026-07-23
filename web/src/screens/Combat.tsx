@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ResultatCombatComplet, Evenement, PacketSprite, Camp } from '../api';
 import { Berry } from '../components/Berry';
+import { basculerSons, arreterMusique, ecouterSons, jouerEffet, jouerOuverture, sonsMuets } from '../sons';
+import type { NomEffet } from '../sons';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GRAND LINE ARENA — écran de combat. Port du rendu de testeur-combat.html (canvas 2D),
@@ -139,6 +141,8 @@ const LABEL_DEBUFF: Record<string, string> = { attack: 'ATK ↓', esquive: 'ESQ 
 // dépasser la garde avant que le 1er ait fini son nettoyage). Un Set au niveau du module, gardé
 // par le seed du combat (unique par combat), garantit un seul vrai lancement quoi qu'il arrive.
 const combatsDejaLances = new Set<number>();
+// Même piège, même parade, pour le clash d'ouverture (voir plus bas).
+const clashDejaJoue = new Set<number>();
 
 export function Combat({
   combat, onRetour, onRejouer,
@@ -164,12 +168,25 @@ export function Combat({
   const [vitesse, setVitesse] = useState<1 | 2>(1);
   const vitesseRef = useRef(1);
   const [fini, setFini] = useState(false);
+  const [muet, setMuet] = useState(sonsMuets());
 
   useEffect(() => { vitesseRef.current = vitesse; }, [vitesse]);
+  useEffect(() => ecouterSons(setMuet), []);
+  // Filet de sécurité indépendant de la boucle de rendu du canvas (voir la fonction
+  // demarrer() plus bas) : garantit que la musique s'arrête si l'écran est quitté.
+  useEffect(() => () => arreterMusique(), []);
 
   const { resultat, spritesA, spritesB } = combat;
   const gauche = resultat.combattants[0]; // camp 'a', toujours affiché à gauche
   const droite = resultat.combattants[1]; // camp 'b'
+
+  // Le clash sonne dès que les 2 comptes apparaissent (écran VS), et enchaîne lui-même
+  // sur la musique (voir jouerOuverture) — pas besoin d'attendre demarrerCombat().
+  useEffect(() => {
+    if (clashDejaJoue.has(resultat.seed)) return;
+    clashDejaJoue.add(resultat.seed);
+    jouerOuverture();
+  }, [resultat.seed]);
 
   const formesChargeesRef = useRef<{
     baseA: FormeChargee; transfoA: FormeChargee | null; baseB: FormeChargee; transfoB: FormeChargee | null;
@@ -487,13 +504,16 @@ export function Combat({
       setTimeout(() => setter((prev) => prev.filter((x) => x.id !== id)), d(tours * 2000));
     }
 
-    async function afficherImpact(attaquant: Fighter, defenseur: Fighter, issue: Issue, ix: number, iy: number, special: boolean) {
+    async function afficherImpact(attaquant: Fighter, defenseur: Fighter, issue: Issue, ix: number, iy: number, special: boolean, sonImpact: NomEffet | null) {
       if (issue.esquive) {
+        jouerEffet('esquive');
         const dx = defenseur.x; setA(defenseur, 'idle', 8, 'ping');
         await tween(220, (t) => { defenseur.x = dx - attaquant.face * Math.sin(t * Math.PI) * 20; });
         popup('ESQUIVE', defenseur.x, GY - H * 0.3, { couleur: '#25d3df' });
         return;
       }
+      // Le critique remplace le son d'impact normal, il ne s'y ajoute pas.
+      if (sonImpact) jouerEffet(issue.crit ? 'critique' : sonImpact);
       setA(defenseur, 'hit', 8, 'once'); flash = 1; shake = 12; fx = { x: ix, y: iy, g: 0, a: 1, couleur: '#fff' };
       const valeur = Math.round(issue.degats?.valeur ?? 0);
       // Le popup dit ce qui SORT DE L'ORDINAIRE, pas le détail du calcul : le "×1.1" du counter
@@ -532,19 +552,19 @@ export function Combat({
       Math.min(max, Math.max(min, Math.abs(distance) * msParPx))
     );
 
-    async function beatMelee(attaquant: Fighter, defenseur: Fighter, issue: Issue, special: boolean) {
+    async function beatMelee(attaquant: Fighter, defenseur: Fighter, issue: Issue, special: boolean, sonImpact: NomEffet | null) {
       attaquant.face = defenseur.x > attaquant.x ? 1 : -1;
       const sx = attaquant.x; const cx = defenseur.x - attaquant.face * (H * 0.15);
       // Course perçue comme lente (retour utilisateur) : -30% sur la durée = +30% de vitesse.
       const dureeAller = dureeSelonDistance(cx - sx, 5.1 * 0.7, 350 * 0.7, 950 * 0.7);
       setA(attaquant, 'run', 12, 'loop'); await tween(dureeAller, (t) => { attaquant.x = lerp(sx, cx, easeOut(t)); });
       setA(attaquant, 'attack', 16, 'once'); await sleep(192);
-      await afficherImpact(attaquant, defenseur, issue, cx + attaquant.face * (H * 0.05), GY - H * 0.16, special);
+      await afficherImpact(attaquant, defenseur, issue, cx + attaquant.face * (H * 0.05), GY - H * 0.16, special, sonImpact);
       await sleep(160); setA(attaquant, 'run', 12, 'loop');
       await tween(dureeAller * 0.85, (t) => { attaquant.x = lerp(cx, sx, easeOut(t)); });
       setA(attaquant, 'idle', 5, 'ping'); setA(defenseur, 'idle', 5, 'ping'); await sleep(120);
     }
-    async function beatRanged(attaquant: Fighter, defenseur: Fighter, issue: Issue, special: boolean) {
+    async function beatRanged(attaquant: Fighter, defenseur: Fighter, issue: Issue, special: boolean, sonImpact: NomEffet | null) {
       const p = packetActuel(attaquant, { spritesA, spritesB });
       attaquant.face = defenseur.x > attaquant.x ? 1 : -1;
       setA(attaquant, 'attack', 12, 'once'); await sleep(288);
@@ -555,25 +575,27 @@ export function Combat({
       projTrail = [];
       await tween(dureeSelonDistance(exp - sxp, 3.4, 280, 800), (t) => { proj!.x = lerp(sxp, exp, t); proj!.y = py; });
       proj = null; projTrail = [];
-      await afficherImpact(attaquant, defenseur, issue, exp, py, special);
+      // Le son se déclenche à l'impact (dans afficherImpact), pas au tir.
+      await afficherImpact(attaquant, defenseur, issue, exp, py, special, sonImpact);
       await sleep(150); setA(attaquant, 'idle', 5, 'ping'); setA(defenseur, 'idle', 5, 'ping'); await sleep(120);
     }
     async function jouerAttaque(declencheur: Evenement & { type: 'attaque' }, issue: Issue) {
       const attaquant = declencheur.acteur === 'a' ? L : R; const defenseur = declencheur.acteur === 'a' ? R : L;
       const p = packetActuel(attaquant, { spritesA, spritesB });
-      if (formeActuelle(attaquant).anims.projectile.length > 0) await beatRanged(attaquant, defenseur, issue, false);
-      else await beatMelee(attaquant, defenseur, issue, false);
+      if (formeActuelle(attaquant).anims.projectile.length > 0) await beatRanged(attaquant, defenseur, issue, false, 'coup_projectile');
+      else await beatMelee(attaquant, defenseur, issue, false, attaquant.classe === 'Sabreur' ? 'coup_epee' : 'coup_normal');
       void p;
     }
 
     // Commun aux 3 catégories de spécial (dmg/buff/transfo) : pose de cast, aura, écran assombri
     // et temps figé CAST_MS — repris du testeur, qui ne les appliquait qu'aux spéciaux à dégâts.
     // Kuroobi (buff) et les transfos (Dalton/Chopper/Pell) méritent le même traitement.
-    function lancerCast(attaquant: Fighter): { hasAnim: boolean; fireAt: number; castT0: number } {
+    function lancerCast(attaquant: Fighter, son: 'special' | 'transformation'): { hasAnim: boolean; fireAt: number; castT0: number } {
       const p = packetActuel(attaquant, { spritesA, spritesB });
       const hasAnim = formeActuelle(attaquant).anims.special.length > 0;
       const hasEffet = formeActuelle(attaquant).anims.special_effet.length > 0;
       popup('SPÉCIAL !', attaquant.x, GY - H * 0.42, { crit: true, life: 1.1 });
+      jouerEffet(son);
       if (hasEffet) { attaquant.effetOn = true; attaquant.effetT0 = performance.now(); }
       attaquant.isCasting = true;
       const castT0 = performance.now();
@@ -595,7 +617,7 @@ export function Combat({
       attaquant.face = defenseur.x > attaquant.x ? 1 : -1;
       const hasProj = formeActuelle(attaquant).anims.special_projectile.length > 0;
       const sx = attaquant.x;
-      const { hasAnim, fireAt, castT0 } = lancerCast(attaquant);
+      const { hasAnim, fireAt, castT0 } = lancerCast(attaquant, 'special');
       await sleep(fireAt);
 
       if (hasAnim) {
@@ -606,16 +628,16 @@ export function Combat({
           projTrail = [];
           await tween(p.spProjDur, (t) => { proj!.x = lerp(sxp, exp, t); proj!.y = py; });
           proj = null; projTrail = [];
-          await afficherImpact(attaquant, defenseur, issue, exp, py, true);
+          await afficherImpact(attaquant, defenseur, issue, exp, py, true, 'coup_projectile');
         } else {
-          await afficherImpact(attaquant, defenseur, issue, defenseur.x - attaquant.face * (H * 0.05), GY - H * 0.16, true);
+          await afficherImpact(attaquant, defenseur, issue, defenseur.x - attaquant.face * (H * 0.05), GY - H * 0.16, true, null);
         }
       } else if (hasProj) {
         attaquant.transformedProj = true; attaquant.t0 = performance.now(); attaquant.mode = 'once';
         attaquant.fps = formeActuelle(attaquant).anims.special_projectile.length;
         const cx = defenseur.x - attaquant.face * (H * 0.08);
         await tween(p.spProjDur, (t) => { attaquant.x = lerp(sx, cx, easeOut(t)); });
-        await afficherImpact(attaquant, defenseur, issue, cx, GY - H * 0.16, true);
+        await afficherImpact(attaquant, defenseur, issue, cx, GY - H * 0.16, true, 'coup_projectile');
         attaquant.transformedProj = false; setA(attaquant, 'run', 12, 'loop');
         await tween(360, (t) => { attaquant.x = lerp(cx, sx, easeOut(t)); });
       }
@@ -624,7 +646,7 @@ export function Combat({
       setA(defenseur, 'idle', 5, 'ping'); await sleep(120);
     }
     async function jouerSpecialBuff(attaquant: Fighter, ev: Evenement & { type: 'buff' }) {
-      const { fireAt, castT0 } = lancerCast(attaquant);
+      const { fireAt, castT0 } = lancerCast(attaquant, 'transformation');
       await sleep(fireAt);
       popup(`+${Math.round(ev.pct * 100)}% ATK`, attaquant.x, GY - H * 0.42, { couleur: '#5fbf4d', crit: true, life: 1.4 });
       fx = { x: attaquant.x, y: GY - H * 0.2, g: 0, a: 1, couleur: '#5fbf4d' };
@@ -632,7 +654,7 @@ export function Combat({
       await finCast(attaquant, castT0);
     }
     async function jouerSpecialTransfo(attaquant: Fighter, ev: Evenement & { type: 'transformation' }) {
-      const { fireAt, castT0 } = lancerCast(attaquant);
+      const { fireAt, castT0 } = lancerCast(attaquant, 'transformation');
       await sleep(fireAt);
       const couleurClasse = { Haki: '#8e44ad', Logia: '#e67e22', Paramecia: '#16a085', Zoan: '#c0392b', Sniper: '#2980b9', Sabreur: '#27ae60' }[attaquant.classe] ?? '#ffc53d';
       popup('TRANSFORMATION !', attaquant.x, GY - H * 0.42, { couleur: '#ffc53d', crit: true, life: 1.6 });
@@ -675,6 +697,9 @@ export function Combat({
       }
       // fin — ouverture et fermeture du combat sont ses deux moments à émotion : le VS claque
       // déjà, la fin ne doit pas se contenter d'un overlay qui se pose par-dessus un écran mort.
+      // camp 'a' = toujours le joueur (§ combat-api.ts : gagne = resultat.vainqueur === 'a').
+      arreterMusique();
+      jouerEffet(beat.evenement.vainqueur === 'a' ? 'victoire' : 'defaite');
       await poseDeVictoire(beat.evenement.vainqueur === 'a' ? L : R);
       setFini(true);
     }
@@ -860,12 +885,19 @@ export function Combat({
 
   return (
     <div style={{ minHeight: '100%', background: '#123540', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 16px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px 0' }}>
         <button
           onClick={() => setVitesse((v) => (v === 1 ? 2 : 1))}
           style={{ font: '800 11px Rubik,Arial', background: vitesse === 2 ? 'var(--or)' : 'rgba(255,255,255,.15)', color: vitesse === 2 ? '#1a1208' : '#fff', border: '2px solid var(--or)', borderRadius: 20, padding: '5px 14px' }}
         >
           VITESSE ×{vitesse}
+        </button>
+        <button
+          onClick={() => basculerSons()}
+          title={muet ? 'Activer les sons' : 'Couper les sons'}
+          style={{ font: '800 13px Rubik,Arial', background: 'rgba(255,255,255,.15)', color: '#fff', border: '2px solid var(--or)', borderRadius: 20, padding: '5px 10px', lineHeight: 1 }}
+        >
+          {muet ? '🔇' : '🔊'}
         </button>
       </div>
 

@@ -6,3 +6,6 @@ node_modules/
 
 # Dépendances de la racine (typecheck du serveur)
 /node_modules/
+
+# Fichiers son bruts déposés par l'utilisateur — la copie utile est dans web/public/sons/
+/Son/

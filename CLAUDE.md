@@ -230,10 +230,9 @@ préviendra quand l'attaquer. Pas encore testé en conditions réelles (prochain
 
 ### Reste à faire
 
-- **Sons** — liste arrêtée avec l'utilisateur le 22/07 (musique + coup normal/épée/projectile,
-  esquive, critique, KO, victoire, défaite, spécial, transformation — 11 fichiers). Le
-  branchement code n'est pas encore fait, en attente que l'utilisateur trouve les fichiers
-  (pistes données : Kenney.nl en CC0, Pixabay Audio).
+- **Son Esquive** — seul son de la liste du 22/07 encore manquant. Le code l'appelle déjà
+  (`jouerEffet('esquive')` dans `Combat.tsx`) : il suffira de déposer `esquive.mp3` dans
+  `web/public/sons/` pour qu'il fonctionne, aucun code à retoucher.
 - **Saisons de prime** — la prime est cumulative, donc les anciens sont mécaniquement
   intouchables. Sans effet à 3 joueurs, mordra quand des viewers arriveront en cours de route.
 - **Quête « ouvrir 1 coffre »** — retirée du catalogue faute d'un compteur de coffres ouverts
@@ -242,6 +241,32 @@ préviendra quand l'attaquer. Pas encore testé en conditions réelles (prochain
   ci-dessus), le duel lui-même n'est pas encore conçu. L'utilisateur préviendra quand l'attaquer.
 
 ### Décisions structurantes à connaître
+
+**Sons (branchés le 23/07).** Module dédié `web/src/sons.ts` (un seul `<audio>` réutilisé par
+effet, jamais recréé à chaque coup). Rien n'est codé en dur par personnage : le choix du son
+suit des propriétés déjà présentes dans les données (classe `Sabreur` → épée, animation de
+projectile présente → projectile, `categorie` du spécial → spécial/transformation) — un nouveau
+perso hérite automatiquement des bons sons sans toucher au code, tant que sa classe et la
+catégorie de son spécial sont correctement renseignées.
+- **Ouverture** : `clash` sonne dès l'écran VS (les 2 comptes qui s'affrontent), et la musique de
+  combat démarre juste après — enchaînement piloté par l'événement `ended` du clash, **pas une
+  durée fixe devinée**. Si `clash.mp3` venait à manquer, un filet de sécurité (`error`/`ended`)
+  démarre la musique quand même : un clash absent ne doit jamais couper toute la musique.
+- **Musique** : boucle qui saute les 20 premières secondes du fichier à **chaque** reprise de
+  boucle (pas seulement au premier lancement) — géré manuellement (`ended` + `currentTime`), pas
+  via l'attribut `loop` natif qui repartirait de 0.
+- **Impact** : coup normal / épée (classe `Sabreur`) / projectile — son joué à l'IMPACT, pas au
+  lancer. Le critique **remplace** le son de coup, il ne s'y ajoute pas. Les spéciaux à
+  projectile (Sniper) jouent aussi le son `coup_projectile` à l'impact.
+- **Spécial** : son `special` au lancement de l'anim pour les spéciaux à dégâts ; son
+  `transformation` pour les spéciaux qui buffent OU qui transforment (retour utilisateur du
+  23/07 : un buff, visuellement, se lit comme une transfo — même son que la vraie transfo).
+- **KO retiré** (retour utilisateur : "il est nul"), victoire/défaite suffisent.
+- **Mute** : bouton 🔊/🔇 sur l'écran de combat, à côté de VITESSE. Coupe le son sans jamais
+  mettre en pause — les effets continuent de se déclencher muets, donc aucune désynchro possible
+  avec l'animation. Préférence retenue en `localStorage` (`gla_sons_muets`).
+- Volumes uniformisés à l'oreille par l'utilisateur le 23/07 : musique -30 %, reste des sons
+  -15 %, réglages dans `VOLUME_MAITRE`/`VOLUME_RELATIF` de `sons.ts`.
 
 **Onboarding (refait le 21/07).** Le compte se crée **vide**. Les deux tirages du §4 sont joués
 par le joueur : roll forcé Commun à la connexion, puis coffre offert après le premier combat.
