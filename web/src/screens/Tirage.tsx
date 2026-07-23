@@ -248,7 +248,8 @@ export interface OnboardingTirage {
 }
 
 export function Tirage({
-  berrys, coffresPremium, catalogue, equipement, persoActifId, persoActifNom, onIncarnerDepuisTirage, onEtatChange,
+  berrys, coffresPremium, catalogue, equipement, persoActifId, persoActifNom, prochainChangementCout = 0,
+  onIncarnerDepuisTirage, onEtatChange,
   onboarding = null,
 }: {
   berrys: number;
@@ -261,6 +262,8 @@ export function Tirage({
   /** Le perso sur lequel un objet fraîchement ouvert sera proposé à l'équipement. */
   persoActifId: number | null;
   persoActifNom: string | null;
+  /** §3 : ce que coûterait le prochain changement de perso. 0 = encore gratuit. Non fourni en onboarding, où le bouton INCARNER n'existe pas. */
+  prochainChangementCout?: number;
   onIncarnerDepuisTirage: (collectionId: number) => void;
   onEtatChange: () => void;
   /** null = l'onglet Coffres normal. Sinon, l'un des deux tirages offerts de l'arrivée (§4). */
@@ -722,7 +725,7 @@ export function Tirage({
               : (
                 <div style={{ display: 'flex', gap: 10, width: '100%' }}>
                   <button onClick={recommencer} style={{ flex: 1, font: '800 13px Rubik,Arial', fontStyle: 'italic', transform: 'skew(-6deg)', background: 'var(--or)', color: '#14303c', border: '3px solid #000', borderRadius: 12, padding: 12, boxShadow: '0 5px 0 #000' }}>
-                    ENCORE
+                    RETOUR
                   </button>
                   {!resultat.doublon && resultat.collection_id !== null && (
                     <button
@@ -734,6 +737,14 @@ export function Tirage({
                   )}
                 </div>
               )}
+
+            {!onboarding && !resultat.doublon && resultat.collection_id !== null && (
+              <div style={{ width: '100%', font: '700 10px Rubik,Arial', color: 'rgba(233,217,176,.7)', textAlign: 'center' }}>
+                {prochainChangementCout > 0
+                  ? <>D'habitude changer de perso coûte des Berrys une fois le quota gratuit épuisé — là ça t'en coûterait <Berry size={10} />{prochainChangementCout}.</>
+                  : 'Tu peux changer de perso gratuitement maintenant — d\'habitude c\'est limité.'}
+              </div>
+            )}
 
             {!onboarding && !resultat.doublon && resultat.collection_id !== null && (
               <button

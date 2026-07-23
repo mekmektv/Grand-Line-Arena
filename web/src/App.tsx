@@ -177,6 +177,10 @@ function App() {
 
     rafraichirEtat();
     rafraichirQuetes();
+    // Sans ça, l'XP du perso (gagnée pendant le combat) ne remonte que si autre chose
+    // recharge la collection entre-temps (changer d'onglet…) — la fiche perso affiche
+    // alors une XP périmée tant qu'on ne l'a pas déclenché soi-même.
+    recupererCollection().then(setCollection).catch(() => {});
   };
 
   if (jetonReinitialisation) {
@@ -311,6 +315,7 @@ function App() {
           equipement={equipement}
           persoActifId={etat.perso_actif?.collection_id ?? null}
           persoActifNom={etat.perso_actif?.nom ?? null}
+          prochainChangementCout={etat.prochain_changement_cout}
           onIncarnerDepuisTirage={incarner}
           onEtatChange={rafraichirTout}
           onboarding={etat.onboarding_etape === ETAPE_COFFRE_OFFERT

@@ -41,6 +41,9 @@ export function Classement({ classement, onOuvrirFiche }: { classement: Classeme
         >
           <div style={{ font: '400 20px/1 Bangers,Rubik', letterSpacing: 2, color: 'var(--or)', textShadow: '2px 2px 0 #1a1208' }}>TABLEAU DES PRIMES</div>
         </div>
+        <div style={{ font: '700 11px Rubik,Arial', color: '#5c3a1a', maxWidth: 280, margin: '8px auto 0' }}>
+          Ta prime monte à chaque victoire et ne redescend jamais.
+        </div>
       </div>
 
       <div style={{ padding: '16px 16px 10px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>

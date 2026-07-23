@@ -26,11 +26,12 @@ const URL_EFFET: Record<NomEffet, string> = {
 // Volume maître + volumes relatifs par son, pour uniformiser des fichiers qui
 // n'ont pas été enregistrés au même niveau. À réajuster à l'oreille si besoin.
 // Retour utilisateur du 23/07 : musique -30%, reste des sons -15%.
+// Retour utilisateur du 23/07 (2) : tous les effets (pas la musique) +10%.
 const VOLUME_MAITRE = 0.55;
 const VOLUME_RELATIF: Record<NomEffet, number> = {
-  coup_normal: 0.8 * 0.85, coup_epee: 0.8 * 0.85, coup_projectile: 0.8 * 0.85, esquive: 0.7 * 0.85,
-  critique: 1 * 0.85, victoire: 0.9 * 0.85, defaite: 0.9 * 0.85, special: 0.85 * 0.85, transformation: 0.9 * 0.85,
-  clash: 1 * 0.85,
+  coup_normal: 0.8 * 0.85 * 1.1, coup_epee: 0.8 * 0.85 * 1.1, coup_projectile: 0.8 * 0.85 * 1.1, esquive: 0.7 * 0.85 * 1.1,
+  critique: 1 * 0.85 * 1.1, victoire: 0.9 * 0.85 * 1.1, defaite: 0.9 * 0.85 * 1.1, special: 0.85 * 0.85 * 1.1, transformation: 0.9 * 0.85 * 1.1,
+  clash: 1 * 0.85 * 1.1,
 };
 const VOLUME_MUSIQUE = VOLUME_MAITRE * 0.5 * 0.7;
 

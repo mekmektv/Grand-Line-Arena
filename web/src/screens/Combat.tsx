@@ -165,7 +165,7 @@ export function Combat({
   const [buffDroite, setBuffDroite] = useState(false);
   const [debuffsGauche, setDebuffsGauche] = useState<{ id: number; emoji: string }[]>([]);
   const [debuffsDroite, setDebuffsDroite] = useState<{ id: number; emoji: string }[]>([]);
-  const [vitesse, setVitesse] = useState<1 | 2>(1);
+  const [vitesse, setVitesse] = useState<1 | 2 | 3>(1);
   const vitesseRef = useRef(1);
   const [fini, setFini] = useState(false);
   const [muet, setMuet] = useState(sonsMuets());
@@ -558,8 +558,14 @@ export function Combat({
       // Course perçue comme lente (retour utilisateur) : -30% sur la durée = +30% de vitesse.
       const dureeAller = dureeSelonDistance(cx - sx, 5.1 * 0.7, 350 * 0.7, 950 * 0.7);
       setA(attaquant, 'run', 12, 'loop'); await tween(dureeAller, (t) => { attaquant.x = lerp(sx, cx, easeOut(t)); });
-      setA(attaquant, 'attack', 16, 'once'); await sleep(192);
-      await afficherImpact(attaquant, defenseur, issue, cx + attaquant.face * (H * 0.05), GY - H * 0.16, special, sonImpact);
+      setA(attaquant, 'attack', 16, 'once');
+      // Le son d'épée arrivait perceptiblement après le coup à l'écran (retour utilisateur) :
+      // on le joue 200 ms plus tôt, sans toucher au timing du reste de l'impact (flash,
+      // dégâts…). Pas d'avance en cas d'esquive : il n'y a alors aucun coup à sonoriser.
+      const avanceEpee = sonImpact === 'coup_epee' && !issue.esquive;
+      if (avanceEpee) setTimeout(() => jouerEffet('coup_epee'), d(Math.max(0, 192 - 200)));
+      await sleep(192);
+      await afficherImpact(attaquant, defenseur, issue, cx + attaquant.face * (H * 0.05), GY - H * 0.16, special, avanceEpee ? null : sonImpact);
       await sleep(160); setA(attaquant, 'run', 12, 'loop');
       await tween(dureeAller * 0.85, (t) => { attaquant.x = lerp(cx, sx, easeOut(t)); });
       setA(attaquant, 'idle', 5, 'ping'); setA(defenseur, 'idle', 5, 'ping'); await sleep(120);
@@ -852,7 +858,7 @@ export function Combat({
 
           <Camp
             combattant={droite} portrait={spritesB.portrait} couleur={couleurD}
-            meta={combat.adversaire} sousTitre={`le pirate de ${combat.adversaire.pseudo}`} cote="droite"
+            meta={combat.adversaire} sousTitre={combat.adversaire.pseudo} cote="droite"
             avantage={combat.avantage?.camp === 'b'}
           />
         </div>
@@ -887,8 +893,8 @@ export function Combat({
     <div style={{ minHeight: '100%', background: '#123540', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px 0' }}>
         <button
-          onClick={() => setVitesse((v) => (v === 1 ? 2 : 1))}
-          style={{ font: '800 11px Rubik,Arial', background: vitesse === 2 ? 'var(--or)' : 'rgba(255,255,255,.15)', color: vitesse === 2 ? '#1a1208' : '#fff', border: '2px solid var(--or)', borderRadius: 20, padding: '5px 14px' }}
+          onClick={() => setVitesse((v) => (v === 1 ? 2 : v === 2 ? 3 : 1))}
+          style={{ font: '800 11px Rubik,Arial', background: vitesse > 1 ? 'var(--or)' : 'rgba(255,255,255,.15)', color: vitesse > 1 ? '#1a1208' : '#fff', border: '2px solid var(--or)', borderRadius: 20, padding: '5px 14px' }}
         >
           VITESSE ×{vitesse}
         </button>

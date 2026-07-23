@@ -20,8 +20,7 @@ const PASSIF_CLASSE: Record<string, string> = {
 };
 
 // §8 point 5 : sprite, classe/rareté/niveau, passif, compétence, bouton Incarner.
-// ⚠️ Simplification : pas de slots équipement (§4ter reporté), pas de vraie XP (aucun
-// combat jouable encore) — la barre reste à 0 avec un message honnête.
+// ⚠️ Simplification : pas de slots équipement (§4ter reporté).
 export function FichePerso({
   carte, changementsRestants, prochainChangementCout, erreur, onRetour, onIncarner,
 }: {
@@ -70,11 +69,15 @@ export function FichePerso({
 
           <div>
             <div style={{ height: 9, borderRadius: 6, background: '#1a1208', overflow: 'hidden' }}>
-              <div style={{ width: '0%', height: '100%', background: '#8a2f1f' }} />
+              <div style={{ width: `${(carte.progression_pct ?? 0) * 100}%`, height: '100%', background: '#8a2f1f' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-              <div style={{ font: '800 10px Rubik,Arial', color: '#5c4326' }}>0 XP</div>
-              <div style={{ font: '600 10px Rubik,Arial', color: '#5c4326', fontStyle: 'italic' }}>Gagne de l'XP en combattant</div>
+              <div style={{ font: '800 10px Rubik,Arial', color: '#5c4326' }}>{carte.xp ?? 0} XP</div>
+              <div style={{ font: '600 10px Rubik,Arial', color: '#5c4326', fontStyle: 'italic' }}>
+                {carte.xp_avant_prochain_niveau != null
+                  ? `${carte.xp_avant_prochain_niveau} XP avant le niveau suivant`
+                  : 'Niveau maximum atteint'}
+              </div>
             </div>
           </div>
 
