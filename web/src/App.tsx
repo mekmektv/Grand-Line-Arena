@@ -18,6 +18,7 @@ import { Classement } from './screens/Classement';
 import { Combat } from './screens/Combat';
 import { Quetes } from './screens/Quetes';
 import { BottomNav, type Onglet } from './components/BottomNav';
+import { debloquerSons } from './sons';
 
 type Statut =
   | { type: 'chargement' }
@@ -152,6 +153,10 @@ function App() {
   };
 
   const combattre = async () => {
+    // Synchrone, AVANT le premier `await` : c'est ce qui garde ce code dans le geste
+    // utilisateur du tap, condition posée par Safari mobile pour débloquer les <audio>
+    // des effets de combat (voir sons.ts).
+    debloquerSons();
     setErreurCombat(''); setLancementCombatEnCours(true);
     try {
       const resultat = await lancerCombat();

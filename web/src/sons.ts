@@ -82,6 +82,31 @@ export function jouerEffet(nom: NomEffet) {
   seekEtJouer(a, 0);
 }
 
+/**
+ * Mobile (surtout Safari iOS) n'autorise un `<audio>.play()` déclenché HORS d'un vrai geste
+ * utilisateur (ici : depuis la boucle d'animation du combat, via des `setTimeout` imbriqués)
+ * que si ce même élément a déjà été joué UNE FOIS pendant un geste — sinon le son est ignoré
+ * en silence. Le clash et la musique marchaient déjà (ils démarrent tout de suite après le
+ * tap sur COMBATTRE, encore dans la fenêtre de tolérance du navigateur) ; les coups, eux,
+ * arrivent plusieurs secondes plus tard, hors de cette fenêtre — d'où le bug "ça marche sur
+ * PC, pas sur téléphone".
+ *
+ * À appeler de façon SYNCHRONE (avant le premier `await`) dans le gestionnaire de clic sur
+ * COMBATTRE : débloque tous les effets d'un coup en les jouant en muet puis en les remettant
+ * à zéro, pour que la boucle de combat puisse les rejouer normalement plus tard.
+ */
+export function debloquerSons() {
+  (Object.keys(URL_EFFET) as NomEffet[]).forEach((nom) => {
+    const a = elementEffet(nom);
+    a.muted = true;
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+      a.muted = muet;
+    }).catch(() => { a.muted = muet; });
+  });
+}
+
 /** Joue le clash d'ouverture (écran VS), puis enchaîne sur la musique de combat
  *  dès que le clash se termine — pas de durée à deviner, on écoute juste 'ended'.
  *  Si le fichier manque ou échoue à charger, la musique démarre quand même (sinon
