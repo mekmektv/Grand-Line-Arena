@@ -50,6 +50,7 @@ d'origine dans le paramètre `chemin`, que `api/index.ts` recombine avec la requ
 |---|---|
 | `SUPABASE_URL` | identique au `server/.env` local |
 | `SUPABASE_SERVICE_ROLE_KEY` | identique — 🔒 secret |
+| `SUPABASE_ANON_KEY` | identique — clé publique (comptes locaux, Supabase Auth) |
 | `TWITCH_CLIENT_ID` | identique |
 | `TWITCH_CLIENT_SECRET` | identique — 🔒 secret |
 | `SESSION_SECRET` | **différent** du local |
