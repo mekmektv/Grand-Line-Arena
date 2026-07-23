@@ -154,8 +154,8 @@ function App() {
 
   const combattre = async () => {
     // Synchrone, AVANT le premier `await` : c'est ce qui garde ce code dans le geste
-    // utilisateur du tap, condition posée par Safari mobile pour débloquer les <audio>
-    // des effets de combat (voir sons.ts).
+    // utilisateur du tap, condition posée par tous les navigateurs pour débloquer
+    // l'AudioContext des effets de combat (voir sons.ts).
     debloquerSons();
     setErreurCombat(''); setLancementCombatEnCours(true);
     try {

@@ -1,7 +1,17 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// GRAND LINE ARENA — sons du combat. Un seul <audio> par effet, réutilisé sur
-// tout le combat (voire d'un combat à l'autre) : créer un nouvel élément à
-// chaque coup rechargerait le fichier depuis le réseau à chaque fois.
+// GRAND LINE ARENA — sons du combat.
+//
+// Les EFFETS (coups, crit, spécial…) passent par la Web Audio API et pas par un
+// simple <audio> : sur mobile, chaque `<audio>.play()` a un temps de démarrage
+// perceptible (le pipeline audio du navigateur doit s'initialiser à chaque
+// appel), invisible sur PC mais assez pour désynchroniser le son du coup à
+// l'écran sur téléphone (retour utilisateur du 23/07). Des buffers décodés à
+// l'avance, joués via AudioBufferSourceNode, démarrent quasi instantanément —
+// c'est la technique standard pour du son de jeu synchronisé sur le web.
+//
+// La MUSIQUE de fond reste un <audio> classique : long fichier en streaming/
+// boucle, pas un effet synchronisé à une frame précise, la latence de
+// démarrage n'y change rien.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type NomEffet =
@@ -12,15 +22,13 @@ const URL_EFFET: Record<NomEffet, string> = {
   coup_normal: '/sons/coup_normal.mp3',
   coup_epee: '/sons/coup_epee.mp3',
   coup_projectile: '/sons/coup_projectile.mp3',
-  // Pas encore fourni par l'utilisateur : l'appel ne fait rien de grave en son
-  // absence (le navigateur échoue silencieusement au play()).
   esquive: '/sons/esquive.mp3',
   critique: '/sons/critique.wav',
   victoire: '/sons/victoire.mp3',
   defaite: '/sons/defaite.mp3',
   special: '/sons/special.wav',
   transformation: '/sons/transformation.wav',
-  clash: '/sons/clash.mp3', // pas encore fourni par l'utilisateur
+  clash: '/sons/clash.mp3',
 };
 
 // Volume maître + volumes relatifs par son, pour uniformiser des fichiers qui
@@ -49,13 +57,12 @@ const abonnes = new Set<(muet: boolean) => void>();
 
 export function sonsMuets() { return muet; }
 
-/** Bascule le mute. Les sons continuent de se déclencher, juste muets — pas de
- *  pause/reprise à gérer, donc pas de désynchro possible avec l'animation. */
+/** Bascule le mute. Les sons continuent de se déclencher, juste à volume 0 —
+ *  pas de pause/reprise à gérer, donc pas de désynchro possible avec l'animation. */
 export function basculerSons(): boolean {
   muet = !muet;
   localStorage.setItem(CLE_MUTE, muet ? '1' : '0');
   if (musiqueEl) musiqueEl.muted = muet;
-  Object.values(effets).forEach((a) => { a.muted = muet; });
   abonnes.forEach((f) => f(muet));
   return muet;
 }
@@ -65,63 +72,61 @@ export function ecouterSons(f: (muet: boolean) => void): () => void {
   return () => abonnes.delete(f);
 }
 
-const effets = {} as Record<NomEffet, HTMLAudioElement>;
-function elementEffet(nom: NomEffet): HTMLAudioElement {
-  if (!effets[nom]) {
-    const a = new Audio(URL_EFFET[nom]);
-    a.volume = VOLUME_MAITRE * VOLUME_RELATIF[nom];
-    a.muted = muet;
-    effets[nom] = a;
-  }
-  return effets[nom];
-}
+// ── Effets : Web Audio, buffers pré-décodés ─────────────────────────────────
 
-export function jouerEffet(nom: NomEffet) {
-  const a = elementEffet(nom);
-  a.muted = muet;
-  seekEtJouer(a, 0);
-}
+const CtorContexteAudio = window.AudioContext
+  ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+const contexte = CtorContexteAudio ? new CtorContexteAudio() : null;
 
-/**
- * Mobile (surtout Safari iOS) n'autorise un `<audio>.play()` déclenché HORS d'un vrai geste
- * utilisateur (ici : depuis la boucle d'animation du combat, via des `setTimeout` imbriqués)
- * que si ce même élément a déjà été joué UNE FOIS pendant un geste — sinon le son est ignoré
- * en silence. Le clash et la musique marchaient déjà (ils démarrent tout de suite après le
- * tap sur COMBATTRE, encore dans la fenêtre de tolérance du navigateur) ; les coups, eux,
- * arrivent plusieurs secondes plus tard, hors de cette fenêtre — d'où le bug "ça marche sur
- * PC, pas sur téléphone".
- *
- * À appeler de façon SYNCHRONE (avant le premier `await`) dans le gestionnaire de clic sur
- * COMBATTRE : débloque tous les effets d'un coup en les jouant en muet puis en les remettant
- * à zéro, pour que la boucle de combat puisse les rejouer normalement plus tard.
- */
-export function debloquerSons() {
+const buffers: Partial<Record<NomEffet, AudioBuffer>> = {};
+
+// Décodage lancé au chargement du module, sans attendre de geste utilisateur —
+// decodeAudioData() ne le demande pas, seule la LECTURE en aura besoin (voir
+// debloquerSons). Un fichier manquant/invalide laisse ce son silencieux sans
+// bloquer les autres, comme le faisait `<audio>.play().catch()` avant.
+if (contexte) {
   (Object.keys(URL_EFFET) as NomEffet[]).forEach((nom) => {
-    const a = elementEffet(nom);
-    a.muted = true;
-    a.play().then(() => {
-      a.pause();
-      a.currentTime = 0;
-      a.muted = muet;
-    }).catch(() => { a.muted = muet; });
+    fetch(URL_EFFET[nom])
+      .then((r) => r.arrayBuffer())
+      .then((brut) => contexte.decodeAudioData(brut))
+      .then((decode) => { buffers[nom] = decode; })
+      .catch(() => {});
   });
 }
 
+/**
+ * Un AudioContext démarre SUSPENDU tant qu'aucun geste utilisateur ne l'a
+ * débloqué (tous navigateurs, mobile comme desktop). À appeler de façon
+ * SYNCHRONE (avant le premier `await`) dans le gestionnaire de clic sur
+ * COMBATTRE, pour rester dans la fenêtre de tolérance du navigateur.
+ */
+export function debloquerSons() {
+  if (contexte && contexte.state === 'suspended') contexte.resume().catch(() => {});
+}
+
+export function jouerEffet(nom: NomEffet) {
+  if (!contexte) return;
+  const buffer = buffers[nom];
+  // Pas encore décodé (ou fichier manquant) : le clash ne doit jamais bloquer
+  // la musique qui l'attend (voir jouerOuverture) ; les autres effets restent
+  // silencieux, sans conséquence sur la suite du combat.
+  if (!buffer) { if (nom === 'clash') demarrerMusique(); return; }
+  const source = contexte.createBufferSource();
+  source.buffer = buffer;
+  const gain = contexte.createGain();
+  gain.gain.value = muet ? 0 : VOLUME_MAITRE * VOLUME_RELATIF[nom];
+  source.connect(gain).connect(contexte.destination);
+  source.start(0);
+  if (nom === 'clash') source.onended = () => demarrerMusique();
+}
+
 /** Joue le clash d'ouverture (écran VS), puis enchaîne sur la musique de combat
- *  dès que le clash se termine — pas de durée à deviner, on écoute juste 'ended'.
- *  Si le fichier manque ou échoue à charger, la musique démarre quand même (sinon
- *  un clash absent bloquerait toute la musique du combat). */
+ *  dès que le clash se termine (voir jouerEffet). Si le buffer n'est pas encore
+ *  décodé ou que la Web Audio API est indisponible, la musique démarre quand
+ *  même (sinon un clash absent bloquerait toute la musique du combat). */
 export function jouerOuverture() {
-  const a = elementEffet('clash');
-  a.muted = muet;
-  const surFinOuErreur = () => {
-    a.removeEventListener('ended', surFinOuErreur);
-    a.removeEventListener('error', surFinOuErreur);
-    demarrerMusique();
-  };
-  a.addEventListener('ended', surFinOuErreur, { once: true });
-  a.addEventListener('error', surFinOuErreur, { once: true });
-  seekEtJouer(a, 0);
+  if (!contexte) { demarrerMusique(); return; }
+  jouerEffet('clash');
 }
 
 let musiqueEl: HTMLAudioElement | null = null;
