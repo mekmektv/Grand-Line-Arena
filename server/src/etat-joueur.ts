@@ -22,6 +22,7 @@ interface LigneJoueur {
   derniere_recharge_changements: string | null;
   presence_berrys_en_attente: number;
   coffres_premium_perso: number;
+  twitch_id: string | null;
 }
 
 interface LigneCollection {
@@ -86,6 +87,9 @@ export interface EtatJoueur {
   coffres_premium_perso: number;
   /** Brique 6 : true si le live est en cours (mis à jour par stream.online/.offline EventSub). */
   live_en_direct: boolean;
+  /** false pour un compte créé sans Twitch (pseudo + mot de passe) qui n'a pas encore associé
+   *  le sien — sert à proposer "Associer mon Twitch" sur l'accueil. */
+  compte_lie_twitch: boolean;
 }
 
 // ⚠️ Ce module n'est plus en lecture seule : l'écran d'accueil est la porte d'entrée normale du
@@ -150,5 +154,6 @@ export async function lireEtatJoueur(playerId: string): Promise<EtatJoueur | nul
     presence_berrys_en_attente: joueur.presence_berrys_en_attente,
     coffres_premium_perso: joueur.coffres_premium_perso,
     live_en_direct: live.en_direct,
+    compte_lie_twitch: joueur.twitch_id !== null,
   };
 }

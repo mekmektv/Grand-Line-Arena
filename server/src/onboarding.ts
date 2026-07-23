@@ -22,7 +22,8 @@ export const ETAPE_TERMINE = 3;
 
 export interface Joueur {
   id: string;
-  twitch_id: string;
+  // null : compte créé sans Twitch (pseudo + mot de passe), pas encore lié — voir auth-local.ts.
+  twitch_id: string | null;
   pseudo: string;
   berrys: number;
   perso_actif_id: number | null;

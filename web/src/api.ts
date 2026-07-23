@@ -44,6 +44,8 @@ export interface EtatJoueur {
   coffres_premium_perso: number;
   /** Brique 6 : true si le live est en cours. */
   live_en_direct: boolean;
+  /** false pour un compte créé sans Twitch qui n'a pas encore associé le sien. */
+  compte_lie_twitch: boolean;
 }
 
 export class ErreurAuth extends Error {}
@@ -57,6 +59,35 @@ export async function recupererEtat(): Promise<EtatJoueur> {
 
 export function urlLoginTwitch(): string {
   return `${API_URL}/auth/twitch/login`;
+}
+
+/** Associe un Twitch à un compte local déjà connecté — nécessite d'avoir déjà une session. */
+export function urlLierTwitch(): string {
+  return `${API_URL}/auth/twitch/lier`;
+}
+
+export type ResultatAuthLocale = { ok: true } | { ok: false; erreur: string };
+
+/** Crée un compte SANS Twitch (pseudo + mot de passe). Twitch reste associable après coup
+ *  (urlLierTwitch) — expliqué à l'inscription pour que le choix ne semble pas définitif. */
+export async function inscriptionLocale(pseudo: string, motDePasse: string): Promise<ResultatAuthLocale> {
+  const res = await fetch(`${API_URL}/auth/local/inscription`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pseudo, mot_de_passe: motDePasse }),
+  });
+  const corps = await res.json();
+  return res.ok ? { ok: true } : { ok: false, erreur: corps.erreur ?? `→ ${res.status}` };
+}
+
+export async function connexionLocale(pseudo: string, motDePasse: string): Promise<ResultatAuthLocale> {
+  const res = await fetch(`${API_URL}/auth/local/connexion`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pseudo, mot_de_passe: motDePasse }),
+  });
+  const corps = await res.json();
+  return res.ok ? { ok: true } : { ok: false, erreur: corps.erreur ?? `→ ${res.status}` };
 }
 
 export function urlLoginDev(pseudo: string): string {

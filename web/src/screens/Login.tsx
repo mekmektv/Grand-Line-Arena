@@ -1,4 +1,5 @@
-import { urlLoginTwitch } from '../api';
+import { useState, type CSSProperties } from 'react';
+import { urlLoginTwitch, inscriptionLocale, connexionLocale } from '../api';
 
 const IconeTwitch = ({ taille = 22 }: { taille?: number }) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" style={{ flex: 'none' }}>
@@ -9,9 +10,39 @@ const IconeTwitch = ({ taille = 22 }: { taille?: number }) => (
   </svg>
 );
 
-// §8 GAME_DESIGN.md point 1 : "un seul bouton Se connecter avec Twitch". Reprend fidèlement
-// le visuel du prototype validé (dégradé océan, soleil, titre Bangers).
+const inputStyle: CSSProperties = {
+  padding: 10, borderRadius: 8, border: 'none', background: 'rgba(0,0,0,.25)', color: '#fff',
+  font: '600 13px Rubik,Arial',
+};
+
+// §8 GAME_DESIGN.md point 1 : le bouton Twitch reste LE choix mis en avant (bonus de présence
+// live + tirages premium réservés à ce chemin). Le pseudo + mot de passe (23/07/2026) est une
+// porte de secours pour un viewer sans Twitch — jamais mélangé au bouton principal, et Twitch
+// reste associable après coup (voir le bandeau "Associer mon Twitch" sur l'accueil).
 export function Login() {
+  const [modeLocal, setModeLocal] = useState<'inscription' | 'connexion' | null>(null);
+  const [pseudo, setPseudo] = useState('');
+  const [motDePasse, setMotDePasse] = useState('');
+  const [erreur, setErreur] = useState('');
+  const [enCours, setEnCours] = useState(false);
+
+  const valider = async () => {
+    if (!pseudo.trim() || !motDePasse) { setErreur('Pseudo et mot de passe requis.'); return; }
+    setEnCours(true);
+    setErreur('');
+    const resultat = modeLocal === 'inscription'
+      ? await inscriptionLocale(pseudo, motDePasse)
+      : await connexionLocale(pseudo, motDePasse);
+    if (resultat.ok) {
+      // Rechargement complet : App.tsx relit /etat au montage, pas besoin de dupliquer cette
+      // logique ici — exactement ce qui se passe déjà au retour du login Twitch.
+      window.location.reload();
+    } else {
+      setErreur(resultat.erreur);
+      setEnCours(false);
+    }
+  };
+
   return (
     <div style={{
       minHeight: '100%', display: 'flex', flexDirection: 'column', position: 'relative',
@@ -25,7 +56,7 @@ export function Login() {
       />
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', gap: 22, padding: 32, textAlign: 'center', position: 'relative',
+        justifyContent: 'center', gap: 18, padding: 32, textAlign: 'center', position: 'relative',
       }}
       >
         <div className="titre-shonen" style={{ font: "400 40px/1 Bangers,Rubik", transform: 'skew(-8deg)', color: '#fff', textShadow: '3px 3px 0 #12324a' }}>
@@ -54,6 +85,54 @@ export function Login() {
           <IconeTwitch />
           <span style={{ transform: 'skew(6deg)', display: 'inline-block' }}>SE CONNECTER AVEC TWITCH</span>
         </a>
+        <div style={{ font: '600 10px Rubik,Arial', color: 'rgba(255,255,255,.75)', maxWidth: 260 }}>
+          Avec Twitch : Berrys de présence en live + tirages premium aux points de chaîne.
+        </div>
+
+        {modeLocal === null ? (
+          <button
+            onClick={() => setModeLocal('connexion')}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.8)', font: '700 11px Rubik,Arial', textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Pas envie de connecter Twitch tout de suite ? Jouer avec un pseudo
+          </button>
+        ) : (
+          <div style={{
+            marginTop: 4, padding: 14, border: '1px dashed rgba(255,255,255,.4)', borderRadius: 10,
+            display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 260,
+          }}
+          >
+            <span style={{ fontSize: 11, color: '#fff', opacity: 0.85 }}>
+              {modeLocal === 'inscription' ? 'Nouveau compte (sans Twitch)' : 'Déjà un compte sans Twitch'}
+            </span>
+            <input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="Pseudo" style={inputStyle} />
+            <input
+              value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} type="password"
+              placeholder="Mot de passe" style={inputStyle}
+              onKeyDown={(e) => { if (e.key === 'Enter') valider(); }}
+            />
+            {erreur && <span style={{ fontSize: 11, color: '#ffb4b4' }}>{erreur}</span>}
+            <button
+              onClick={valider}
+              disabled={enCours}
+              style={{
+                textAlign: 'center', padding: 10, borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: 'var(--cyan)', color: '#0a2126', fontWeight: 700,
+              }}
+            >
+              {modeLocal === 'inscription' ? 'Créer le compte' : 'Se connecter'}
+            </button>
+            <button
+              onClick={() => { setModeLocal(modeLocal === 'inscription' ? 'connexion' : 'inscription'); setErreur(''); }}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', font: '700 10px Rubik,Arial', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              {modeLocal === 'inscription' ? 'J\'ai déjà un compte' : 'Créer un nouveau compte'}
+            </button>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.6)' }}>
+              Tu pourras associer ton Twitch plus tard, depuis l'accueil.
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -40,6 +40,7 @@ function App() {
   const [lancementCombatEnCours, setLancementCombatEnCours] = useState(false);
   const [erreurCombat, setErreurCombat] = useState('');
   const [erreurIncarner, setErreurIncarner] = useState('');
+  const [avisLienTwitch, setAvisLienTwitch] = useState('');
 
   // L'avancement de l'arrivée (§4) vient du SERVEUR, pas d'un `?login=bienvenue` dans l'URL
   // comme avant : ce paramètre disparaissait au premier rechargement de page, et le joueur
@@ -50,6 +51,15 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Le retour de /auth/twitch/lier (voir Accueil.tsx) porte son résultat en query string —
+    // le seul endroit naturel puisque c'est une redirection, pas un appel fetch classique.
+    const lien = new URLSearchParams(window.location.search).get('lien');
+    if (lien === 'deja_utilise') setAvisLienTwitch('Ce compte Twitch est déjà associé à un autre joueur ici.');
+    else if (lien === 'refuse') setAvisLienTwitch('Association Twitch annulée.');
+    else if (lien === 'ok') setAvisLienTwitch('Compte Twitch associé !');
+
+    if (lien) setTimeout(() => setAvisLienTwitch(''), 4000);
+
     if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
     recupererEtat()
       .then((etat) => setStatut({ type: 'connecte', etat }))
@@ -308,6 +318,11 @@ function App() {
         <div className="op-noscroll">{contenu}</div>
         {/* La nav reste HORS de la zone de scroll (comme le prototype), sinon elle défile avec le contenu. */}
         {afficherNav && !ficheOuverte && !ficheJoueurOuverte && !quetesOuvertes && <BottomNav actif={onglet} onChange={setOnglet} />}
+        {avisLienTwitch && (
+          <div style={{ position: 'absolute', bottom: afficherNav ? 90 : 16, left: 16, right: 16, background: '#1a1208', border: '2px solid var(--or)', borderRadius: 10, padding: 10, color: 'var(--texte)', fontSize: 12, textAlign: 'center', zIndex: 30 }}>
+            {avisLienTwitch}
+          </div>
+        )}
       </div>
     </div>
   );

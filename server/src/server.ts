@@ -6,7 +6,10 @@
 // Routes :
 //   GET  /auth/twitch/login     → redirige vers l'écran d'autorisation Twitch
 //   GET  /auth/twitch/streamer/login → autorisation DU STREAMER, scopes élevés (Brique 6, ?cle=...)
-//   GET  /auth/twitch/callback  → échange le code ; joueur (cookie) OU streamer (jeton stocké)
+//   GET  /auth/twitch/lier      → associe un Twitch à un compte local déjà connecté
+//   GET  /auth/twitch/callback  → échange le code ; joueur / streamer / association (cookie state)
+//   POST /auth/local/inscription → crée un compte SANS Twitch { pseudo, mot_de_passe }
+//   POST /auth/local/connexion   → connecte un compte local { pseudo, mot_de_passe }
 //   POST /webhooks/twitch/eventsub → notifications Twitch (redemption, stream online/offline)
 //   GET  /cron/presence         → appelée par un cron externe toutes les 1 min (?cle=...)
 //   POST /tirage/premium        → ouvre un coffre premium (consomme le stock, meilleurs taux)
@@ -36,8 +39,9 @@ import { randomBytes } from 'node:crypto';
 import { env, verifierEnvAuDemarrage } from './env.ts';
 import {
   creerCookieSession, lireCookieSession, parserCookies,
-  NOM_COOKIE_SESSION, NOM_COOKIE_STATE, NOM_COOKIE_STATE_STREAMER,
+  NOM_COOKIE_SESSION, NOM_COOKIE_STATE, NOM_COOKIE_STATE_STREAMER, NOM_COOKIE_STATE_LIER,
 } from './session.ts';
+import { creerCompteLocal, connecterCompteLocal, lierCompteTwitch } from './auth-local.ts';
 import { enregistrerTokenBroadcaster } from './twitch-broadcaster.ts';
 import { verifierSignatureEventsub } from './twitch-eventsub.ts';
 import {
@@ -137,6 +141,42 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       return;
     }
 
+    if (url.pathname === '/auth/local/inscription' && req.method === 'POST') {
+      const { pseudo, mot_de_passe } = await lireCorpsJSON<{ pseudo?: string; mot_de_passe?: string }>(req);
+      if (!pseudo || !mot_de_passe) {
+        res.writeHead(400).end(JSON.stringify({ erreur: 'Pseudo et mot de passe requis.' }));
+        return;
+      }
+      try {
+        const joueur = await creerCompteLocal(pseudo, mot_de_passe);
+        const cookieSession = creerCookieSession(joueur.id);
+        res.setHeader('Set-Cookie', `${NOM_COOKIE_SESSION}=${cookieSession}; ${cookieAttributs(30 * 24 * 3600)}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200).end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(400).end(JSON.stringify({ erreur: (e as Error).message }));
+      }
+      return;
+    }
+
+    if (url.pathname === '/auth/local/connexion' && req.method === 'POST') {
+      const { pseudo, mot_de_passe } = await lireCorpsJSON<{ pseudo?: string; mot_de_passe?: string }>(req);
+      if (!pseudo || !mot_de_passe) {
+        res.writeHead(400).end(JSON.stringify({ erreur: 'Pseudo et mot de passe requis.' }));
+        return;
+      }
+      try {
+        const joueur = await connecterCompteLocal(pseudo, mot_de_passe);
+        const cookieSession = creerCookieSession(joueur.id);
+        res.setHeader('Set-Cookie', `${NOM_COOKIE_SESSION}=${cookieSession}; ${cookieAttributs(30 * 24 * 3600)}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200).end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(400).end(JSON.stringify({ erreur: (e as Error).message }));
+      }
+      return;
+    }
+
     if (url.pathname === '/auth/twitch/login' && req.method === 'GET') {
       const state = randomBytes(16).toString('hex');
       const params = new URLSearchParams({
@@ -173,22 +213,43 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       return;
     }
 
+    if (url.pathname === '/auth/twitch/lier' && req.method === 'GET') {
+      // Un compte local (pseudo + mot de passe) associe son Twitch après coup — il faut donc
+      // déjà être connecté, contrairement au login normal.
+      const playerId = lireCookieSession(cookies[NOM_COOKIE_SESSION]);
+      if (!playerId) { res.writeHead(401).end('Connecte-toi d\'abord.'); return; }
+
+      const state = randomBytes(16).toString('hex');
+      const params = new URLSearchParams({
+        client_id: env.twitchClientId,
+        redirect_uri: env.twitchRedirectUri,
+        response_type: 'code',
+        scope: '',
+        state,
+      });
+      res.setHeader('Set-Cookie', `${NOM_COOKIE_STATE_LIER}=${state}; ${cookieAttributs(600)}`);
+      res.writeHead(302, { Location: `${TWITCH_AUTHORIZE_URL}?${params}` }).end();
+      return;
+    }
+
     if (url.pathname === '/auth/twitch/callback' && req.method === 'GET') {
       const code = url.searchParams.get('code');
       const state = url.searchParams.get('state');
       const erreur = url.searchParams.get('error');
 
-      // Même route de retour pour les deux flux (login joueur / autorisation streamer) : ça
-      // évite d'enregistrer une 2e URL de redirection sur dev.twitch.tv. On les distingue par
-      // le cookie state qui correspond, chacun posé par sa propre route de départ.
+      // Même route de retour pour les trois flux (login joueur / autorisation streamer /
+      // association Twitch) : ça évite d'enregistrer une 2e ou 3e URL de redirection sur
+      // dev.twitch.tv. On les distingue par le cookie state qui correspond, chacun posé par
+      // sa propre route de départ.
       const estFluxStreamer = !!state && state === cookies[NOM_COOKIE_STATE_STREAMER];
+      const estFluxLier = !!state && state === cookies[NOM_COOKIE_STATE_LIER];
 
       if (erreur) {
-        const cible = estFluxStreamer ? 'streamer=refuse' : 'login=refuse';
+        const cible = estFluxStreamer ? 'streamer=refuse' : estFluxLier ? 'lien=refuse' : 'login=refuse';
         res.writeHead(302, { Location: `${env.frontendUrl}/?${cible}` }).end();
         return;
       }
-      if (!code || !state || (state !== cookies[NOM_COOKIE_STATE] && !estFluxStreamer)) {
+      if (!code || !state || (state !== cookies[NOM_COOKIE_STATE] && !estFluxStreamer && !estFluxLier)) {
         res.writeHead(400).end('État OAuth invalide ou expiré (rejoue /auth/twitch/login).');
         return;
       }
@@ -234,6 +295,22 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       };
       const twitchUser = data[0];
       if (!twitchUser) { res.writeHead(502).end('Twitch n\'a renvoyé aucun profil.'); return; }
+
+      if (estFluxLier) {
+        const playerId = lireCookieSession(cookies[NOM_COOKIE_SESSION]);
+        res.setHeader('Set-Cookie', `${NOM_COOKIE_STATE_LIER}=; ${cookieAttributs(0)}`);
+        if (!playerId) { res.writeHead(302, { Location: `${env.frontendUrl}/?lien=refuse` }).end(); return; }
+
+        try {
+          await lierCompteTwitch(playerId, twitchUser.id, twitchUser.profile_image_url ?? null);
+          res.writeHead(302, { Location: `${env.frontendUrl}/?lien=ok` }).end();
+        } catch {
+          // Message générique côté redirection (pas de query string avec le détail) : le cas
+          // normal est "déjà lié à un autre compte", pas la peine d'exposer plus.
+          res.writeHead(302, { Location: `${env.frontendUrl}/?lien=deja_utilise` }).end();
+        }
+        return;
+      }
 
       // profile_image_url est renvoyé sans scope particulier (c'est une donnée publique).
       // Optionnel malgré tout : un compte sans photo n'a pas ce champ.

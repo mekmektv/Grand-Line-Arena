@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EtatJoueur, QueteAffichee } from '../api';
+import { urlLierTwitch } from '../api';
 import { Berry } from '../components/Berry';
 
 const COULEUR_CLASSE: Record<string, string> = {
@@ -262,6 +263,26 @@ export function Accueil({
         >
           ⚔️ COMBATTRE
         </button>
+
+        {/* Compte créé sans Twitch (23/07/2026) : propose d'associer Twitch après coup, pour
+            débloquer la présence live + les tirages premium sans avoir eu à choisir au départ. */}
+        {!etat.compte_lie_twitch && (
+          <a
+            href={urlLierTwitch()}
+            style={{
+              textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10,
+              background: '#14303c', border: '2px solid var(--or)', borderRadius: 10,
+              padding: 10, marginBottom: 10, boxShadow: '0 3px 0 #000',
+            }}
+          >
+            <span style={{ flex: 'none', fontSize: 16 }}>🔗</span>
+            <span style={{ flex: 1, font: '700 11px/1.3 Rubik,Arial', color: '#fff', textAlign: 'left' }}>
+              Associer mon compte Twitch<br />
+              <span style={{ opacity: 0.75, fontWeight: 600 }}>Débloque les Berrys de présence en live + les tirages premium.</span>
+            </span>
+            <span style={{ flex: 'none', font: '900 16px Rubik,Arial', color: 'var(--or)' }}>›</span>
+          </a>
+        )}
 
         {/* Bandeau live (Brique 6). Ouvre la vraie chaîne dans un nouvel onglet ; le texte change
             selon etat.live_en_direct (mis à jour par stream.online/.offline EventSub) — pas de

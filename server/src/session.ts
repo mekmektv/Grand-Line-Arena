@@ -64,3 +64,5 @@ export const NOM_COOKIE_STATE = 'opa_oauth_state';
 // puisse distinguer les deux flux (login joueur vs autorisation broadcaster) sans rien ajouter
 // à l'URL de redirection déjà enregistrée sur dev.twitch.tv.
 export const NOM_COOKIE_STATE_STREAMER = 'opa_oauth_state_streamer';
+// Compte local (pseudo + mot de passe) qui associe son Twitch après coup — même raison qu'au-dessus.
+export const NOM_COOKIE_STATE_LIER = 'opa_oauth_state_lier';
