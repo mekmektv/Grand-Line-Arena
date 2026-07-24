@@ -498,7 +498,11 @@ export interface GainXp {
 }
 
 /** §4bis : ce qu'on affiche du camp d'en face. Le serveur ne dit jamais si c'est un bot. */
-export interface AdversaireAffiche { pseudo: string; niveau: number; rarete: string; }
+export interface AdversaireAffiche {
+  pseudo: string; niveau: number; rarete: string;
+  /** §8bis : true si c'est un rival (voisin de classement). Jamais true pour un bot. */
+  est_rival: boolean;
+}
 
 export interface ResultatCombatComplet {
   resultat: ResultatCombatBrut;

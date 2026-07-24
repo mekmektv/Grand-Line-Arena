@@ -13,7 +13,7 @@ import { appliquerXpCombat, type GainXp } from './progression.ts';
 import { appliquerRecharges } from './recharge-api.ts';
 import { equipementDuPerso } from './equipement-api.ts';
 import { supabaseSelect, supabaseSelectUn, supabaseInsert, supabaseUpdate } from './supabase.ts';
-import { lireHeadToHead, type HeadToHead } from './rivaux.ts';
+import { lireHeadToHead, lireIdsRivaux, type HeadToHead } from './rivaux.ts';
 import { construirePacketSprite, type PacketSprite, type LigneCharacterRendu } from './sprites.ts';
 import { urlPublique } from './assets.ts';
 import type { ResultatCombat } from './types.ts';
@@ -66,6 +66,10 @@ export interface AdversaireAffiche {
   pseudo: string;
   niveau: Niveau;
   rarete: string;
+  /** §8bis : true si cet adversaire est un rival du joueur (voisin de classement). Toujours
+   *  false pour un bot — les bots ne sont pas au classement, donc ce drapeau ne trahit JAMAIS
+   *  qu'un adversaire en est un (l'anti-frustration du §4bis reste couverte). */
+  est_rival: boolean;
 }
 
 export interface ResultatCombatComplet {
@@ -346,11 +350,15 @@ export async function lancerCombat(playerId: string): Promise<ResultatCombatComp
     construirePaquetPourPerso(ligneB),
   ]);
 
+  // §8bis : signaler sur l'écran VS si le matchmaking nous sert un rival. Calculé seulement
+  // pour un vrai joueur — un bot a joueurBId null, donc jamais rival (aucune fuite de bot).
+  const estRival = adversaire.joueurBId !== null && (await lireIdsRivaux(playerId)).has(adversaire.joueurBId);
+
   return {
     resultat,
     spritesA,
     spritesB,
-    adversaire: { pseudo: adversaire.pseudo, niveau: adversaire.niveau, rarete: ligneB.rarete },
+    adversaire: { pseudo: adversaire.pseudo, niveau: adversaire.niveau, rarete: ligneB.rarete, est_rival: estRival },
     moi: { pseudo: joueur.pseudo, niveau: niveauA, rarete: ligneA.rarete },
     avantage: calculerAvantage(persoA.classe, persoB.classe, config),
     gains: {
@@ -449,7 +457,10 @@ export async function duelAmical(playerId: string, cibleId: string): Promise<Res
   });
 
   // Le bilan est relu APRÈS l'insertion pour que ce duel y soit déjà compté.
-  const confrontation = await lireHeadToHead(playerId, cibleId);
+  const [confrontation, rivaux] = await Promise.all([
+    lireHeadToHead(playerId, cibleId),
+    lireIdsRivaux(playerId),
+  ]);
 
   const [spritesA, spritesB] = await Promise.all([
     construirePaquetPourPerso(ligneA),
@@ -460,7 +471,7 @@ export async function duelAmical(playerId: string, cibleId: string): Promise<Res
     resultat,
     spritesA,
     spritesB,
-    adversaire: { pseudo: cible.pseudo, niveau: niveauB, rarete: ligneB.rarete },
+    adversaire: { pseudo: cible.pseudo, niveau: niveauB, rarete: ligneB.rarete, est_rival: rivaux.has(cibleId) },
     moi: { pseudo: joueur.pseudo, niveau: niveauA, rarete: ligneA.rarete },
     avantage: calculerAvantage(persoA.classe, persoB.classe, config),
     amical: true,

@@ -48,6 +48,17 @@ export async function lireHeadToHead(viewerId: string, cibleId: string): Promise
  * monde — 1er → 2e et 3e ; dernier → les deux au-dessus. À deux joueurs, il n'y en a qu'un ; seul,
  * aucun. `moiIndex < 0` (joueur hors classement) ne renvoie rien.
  */
+/**
+ * Les ids des rivaux d'un joueur, lus depuis la base. Le tri DOIT être identique à celui du
+ * classement (`prime.desc,id.asc`) pour que les voisins soient exactement les mêmes qu'à
+ * l'affichage — sinon un joueur serait « rival » au combat mais pas au classement, ou l'inverse.
+ */
+export async function lireIdsRivaux(playerId: string): Promise<Set<string>> {
+  const joueurs = await supabaseSelect<{ id: string }>('players', { select: 'id', order: 'prime.desc,id.asc' });
+  const moiIndex = joueurs.findIndex((j) => j.id === playerId);
+  return idsRivaux(joueurs.map((j) => j.id), moiIndex);
+}
+
 export function idsRivaux(idsClasses: string[], moiIndex: number): Set<string> {
   const n = idsClasses.length;
   const rivaux = new Set<string>();

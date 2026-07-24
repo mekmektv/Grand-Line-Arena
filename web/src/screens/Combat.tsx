@@ -765,11 +765,11 @@ export function Combat({
     // Un camp par côté du portrait : nom, niveau, rareté. L'écran VS ne montrait que nom +
     // classe, alors que l'enjeu dramatique du combat est « Arlong Niv 3 vs Crocodile Niv 1 » —
     // le niveau est le levier n°1 de l'équilibrage (+40 %).
-    const Camp = ({ combattant, portrait, couleur, meta, sousTitre, cote, avantage }: {
+    const Camp = ({ combattant, portrait, couleur, meta, sousTitre, cote, avantage, rival }: {
       combattant: { nom: string; classe: string };
       portrait: string | null; couleur: string;
       meta: { niveau: number; rarete: string };
-      sousTitre: string; cote: 'gauche' | 'droite'; avantage: boolean;
+      sousTitre: string; cote: 'gauche' | 'droite'; avantage: boolean; rival: boolean;
     }) => (
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, flex: 1, minWidth: 0,
@@ -779,6 +779,18 @@ export function Combat({
         animationDelay: cote === 'gauche' ? '0s' : '.15s',
       }}
       >
+        {/* §8bis : signale un rival servi par le matchmaking (ou défié). Au-dessus du portrait
+            car celui-ci est en overflow:hidden — un badge dessus serait rogné. */}
+        {rival && (
+          <div style={{
+            background: '#1a1208', color: 'var(--or)', border: '2px solid #8a2f1f', borderRadius: 20,
+            font: '800 9px Rubik,Arial', letterSpacing: 1, padding: '2px 10px',
+            animation: 'vsClaque .4s cubic-bezier(.2,.8,.3,1.4) .5s both',
+          }}
+          >
+            ⚔️ RIVAL
+          </div>
+        )}
         <div style={{
           width: 100, height: 100, borderRadius: 14, overflow: 'hidden', background: '#123540',
           // Le contour du portrait suit la RARETÉ, pas la classe (retour utilisateur du 24/07) —
@@ -845,7 +857,7 @@ export function Combat({
           <Camp
             combattant={gauche} portrait={spritesA.portrait} couleur={couleurG}
             meta={combat.moi} sousTitre="ton pirate" cote="gauche"
-            avantage={combat.avantage?.camp === 'a'}
+            avantage={combat.avantage?.camp === 'a'} rival={false}
           />
 
           <div style={{
@@ -861,7 +873,7 @@ export function Combat({
           <Camp
             combattant={droite} portrait={spritesB.portrait} couleur={couleurD}
             meta={combat.adversaire} sousTitre={combat.adversaire.pseudo} cote="droite"
-            avantage={combat.avantage?.camp === 'b'}
+            avantage={combat.avantage?.camp === 'b'} rival={combat.adversaire.est_rival}
           />
         </div>
 

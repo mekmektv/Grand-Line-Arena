@@ -402,6 +402,12 @@ ligne du classement. Calcul dans `server/src/rivaux.ts` (`idsRivaux`, pur). **Au
 ne rapporte rien. Bénéfice de côté : ça donne à chacun une cible *relative* atteignable, ce qui
 adoucit la limite « les anciens sont intouchables » du §4quater sans réinitialiser la prime.
 
+Un rival est aussi **signalé sur l'écran VS** (badge « ⚔️ RIVAL »), y compris quand le matchmaking
+te le sert — pour le reconnaître au vol. ⚠️ **Sans fuite de bot** : un bot n'étant jamais au
+classement, il n'est jamais rival, donc l'absence de badge ne distingue pas un bot d'un simple
+non-rival (l'anti-frustration du §4bis, qui déguise un bot en viewer, reste couverte). Côté serveur,
+`est_rival` n'est calculé que pour un vrai joueur (`joueurBId` non nul).
+
 **Route :** `POST /duel { cible }`. Logique dans `duelAmical()` (`combat-api.ts`), qui partage le
 moteur et le rendu avec `lancerCombat()` mais n'écrit **aucune** mise à jour de `players`/
 `collection`.
