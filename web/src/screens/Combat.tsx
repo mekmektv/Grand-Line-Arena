@@ -181,7 +181,8 @@ export function Combat({
   useEffect(() => {
     const img = new Image();
     img.onload = () => { fondRef.current = img; };
-    img.src = '/arene-pirate.png';
+    // Nom de fichier neutre : changer de décor = remplacer ce seul fichier, sans toucher au code.
+    img.src = '/arene-fond.jpg';
   }, []);
   // Filet de sécurité indépendant de la boucle de rendu du canvas (voir la fonction
   // demarrer() plus bas) : garantit que la musique s'arrête si l'écran est quitté.
