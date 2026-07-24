@@ -221,7 +221,22 @@ le matchmaking, mais **sans aucun enjeu** (pas d'énergie, ni Berrys, ni XP, ni 
 - **Rivaux** = voisins de classement (`idsRivaux()`, pur, testé sur les cas limites). Aux
   extrémités on complète par l'autre côté (1er → 2e+3e). Aucune récompense à les battre : label,
   pas mécanique. `fiche-joueur.ts` reçoit désormais **deux ids** (cible + demandeur) pour calculer
-  la confrontation et `est_moi` (pas de bouton défier sur sa propre fiche).
+  la confrontation et `est_moi` (pas de bouton défier sur sa propre fiche). Un rival est aussi
+  signalé sur l'**écran VS** (badge « ⚔️ RIVAL », `adversaire.est_rival`) — jamais true pour un
+  bot, donc pas de fuite de l'anti-frustration (§4bis).
+
+### Décor de l'arène de combat (24/07/2026)
+
+Le fond du combat n'est plus le dégradé bleu/sable dessiné au canvas : c'est une image pixel-art,
+**`web/public/arene-pirate.png`** (crique pirate, recadrée 3:4 pour l'arène). Chargée dans
+`Combat.tsx` (`fondRef`, préchargée pendant l'écran VS) et dessinée en **cover** dans `drawBG()`,
+avec un **voile sombre dégradé en bas** (`rgba(10,6,2,0)` → `.4` de 50 % à 100 % de la hauteur)
+pour détacher les persos du dallage clair — réglable en changeant ce seul `.4`. **Repli conservé**
+sur l'ancien dégradé si l'image ne charge pas : un décor manquant ne bloque jamais un combat.
+Pour **remplacer le décor** : recadrer en 3:4, quantiser (pixel-art = palette 256 suffit, ~600 Ko
+au lieu de ~1,7 Mo), écraser le fichier. `imageSmoothingEnabled` est mis à `true` pour CE dessin
+(on réduit une grande image ; le nearest-neighbor des sprites scintillerait), les sprites le
+remettent à `false` localement.
 
 ### Connexion — deux chemins désormais (23/07/2026)
 

@@ -152,6 +152,10 @@ export function Combat({
   onRejouer: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Le décor de l'arène (pixel-art, web/public/). Chargé à part des sprites : s'il n'est pas
+  // encore prêt au démarrage, drawBG retombe sur l'ancien dégradé — un décor manquant ne doit
+  // jamais empêcher un combat de se jouer.
+  const fondRef = useRef<HTMLImageElement | null>(null);
   const [phase, setPhase] = useState<'vs' | 'combat'>('vs');
   const [pret, setPret] = useState(false);
   const [erreurChargement, setErreurChargement] = useState('');
@@ -172,6 +176,13 @@ export function Combat({
 
   useEffect(() => { vitesseRef.current = vitesse; }, [vitesse]);
   useEffect(() => ecouterSons(setMuet), []);
+  // Précharge le décor pendant l'écran VS. drawBG le lit à chaque frame via le ref, donc dès
+  // qu'il est prêt il apparaît, sans bloquer le démarrage du combat.
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => { fondRef.current = img; };
+    img.src = '/arene-pirate.png';
+  }, []);
   // Filet de sécurité indépendant de la boucle de rendu du canvas (voir la fonction
   // demarrer() plus bas) : garantit que la musique s'arrête si l'écran est quitté.
   useEffect(() => () => arreterMusique(), []);
@@ -377,6 +388,24 @@ export function Combat({
     }
 
     function drawBG() {
+      const fond = fondRef.current;
+      if (fond) {
+        // Le décor (image 3:4) recouvre l'arène en "cover" (comme object-fit:cover) : on remplit
+        // toute la surface quitte à déborder d'un côté, jamais de bande vide. imageSmoothingEnabled
+        // à true car on RÉDUIT une grande image (le nearest-neighbor des sprites scintillerait ici).
+        ctx.imageSmoothingEnabled = true;
+        const ir = fond.width / fond.height;
+        let dw = W; let dh = H; let dx = 0; let dy = 0;
+        if (W / H > ir) { dh = W / ir; dy = (H - dh) / 2; } else { dw = H * ir; dx = (W - dw) / 2; }
+        ctx.drawImage(fond, dx, dy, dw, dh);
+        // Voile sombre du bas (retour utilisateur du 24/07) : détache les persos du dallage clair.
+        // Dessiné ici (avant les combattants) → il assombrit le sol sans jamais ternir les persos.
+        const voile = ctx.createLinearGradient(0, H * 0.5, 0, H);
+        voile.addColorStop(0, 'rgba(10,6,2,0)'); voile.addColorStop(1, 'rgba(10,6,2,.4)');
+        ctx.fillStyle = voile; ctx.fillRect(0, 0, W, H);
+        return;
+      }
+      // Repli : l'ancien dégradé ciel/sable, si le décor n'a pas (encore) chargé.
       const g = ctx.createLinearGradient(0, 0, 0, H);
       g.addColorStop(0, '#2a6cb0'); g.addColorStop(0.5, '#3a86c0'); g.addColorStop(0.5, '#c9a24a'); g.addColorStop(1, '#a07c34');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
