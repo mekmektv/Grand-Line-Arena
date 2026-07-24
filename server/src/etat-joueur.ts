@@ -5,6 +5,7 @@ import type { Niveau } from './index.ts';
 import { chargerConfig, chargerPerso, calculerStats } from './index.ts';
 import { appliquerRecharges } from './recharge-api.ts';
 import { prixProchainChangement } from './recharge.ts';
+import { equipementDuPerso } from './equipement-api.ts';
 import { supabaseSelect, supabaseSelectUn } from './supabase.ts';
 import { urlPublique } from './assets.ts';
 import { lireEtatLive } from './twitch-live-api.ts';
@@ -120,7 +121,11 @@ export async function lireEtatJoueur(playerId: string): Promise<EtatJoueur | nul
         // Le catalogue ne définit que 3 tiers de puissance (§4) ; le niveau du perso s'y
         // range au plus près en attendant que la courbe XP → tier soit spécifiée.
         const niveauTier = Math.min(3, Math.max(1, ligneCollection.niveau)) as Niveau;
-        const stats = calculerStats(perso, niveauTier, config);
+        // Sans ça, l'accueil affichait les PV/Attack SANS le bonus de l'équipement porté
+        // (§4ter) — le combat, lui, le comptait bien (voir equipementDuPerso dans
+        // combat-api.ts), d'où un écart entre la fiche et le vrai résultat des combats.
+        const equipement = await equipementDuPerso(ligneCollection.id, config);
+        const stats = calculerStats(perso, niveauTier, config, equipement);
 
         persoActif = {
           collection_id: ligneCollection.id,

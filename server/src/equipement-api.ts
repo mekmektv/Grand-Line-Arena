@@ -76,7 +76,9 @@ function versPossede(l: LigneEquipement, config: Config): ObjetPossede {
   return { ...definition(l.cle, config), id: l.id, collection_id: l.collection_id };
 }
 
-async function lireObjets(playerId: string, config: Config): Promise<ObjetPossede[]> {
+/** Tous les objets d'un joueur (inventaire + équipés), en un seul aller-retour. Réutilisé
+ *  par collection.ts pour calculer les PV/Attack affichés sans une requête par perso. */
+export async function lireObjets(playerId: string, config: Config): Promise<ObjetPossede[]> {
   const lignes = await supabaseSelect<LigneEquipement>('equipment', {
     player_id: `eq.${playerId}`, select: '*', order: 'id.asc',
   });

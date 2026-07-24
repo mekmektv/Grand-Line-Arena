@@ -781,8 +781,10 @@ export function Combat({
       >
         <div style={{
           width: 100, height: 100, borderRadius: 14, overflow: 'hidden', background: '#123540',
-          border: `4px solid ${couleur}`, position: 'relative',
-          boxShadow: avantage ? `0 0 16px 3px ${couleur}` : undefined,
+          // Le contour du portrait suit la RARETÉ, pas la classe (retour utilisateur du 24/07) —
+          // `couleur` (classe) reste utilisé pour le badge de classe et le dégradé de fond.
+          border: `4px solid ${COULEUR_RARETE[meta.rarete] ?? '#888'}`, position: 'relative',
+          boxShadow: avantage ? `0 0 16px 3px ${COULEUR_RARETE[meta.rarete] ?? '#888'}` : undefined,
         }}
         >
           {portrait

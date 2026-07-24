@@ -5,6 +5,8 @@ import type { Niveau } from './index.ts';
 import { chargerConfig, chargerPerso, calculerStats, detaillerProgression } from './index.ts';
 import { supabaseSelect, supabaseSelectUn } from './supabase.ts';
 import { urlPublique } from './assets.ts';
+import { lireObjets } from './equipement-api.ts';
+import type { ObjetEquipement } from './types.ts';
 
 interface LigneCharacterComplete {
   id: number;
@@ -67,6 +69,18 @@ export async function listerCollection(playerId: string): Promise<CarteCollectio
   const config = chargerConfig(lignesConfig as { cle: string; valeur: unknown }[]);
   const collectionParCharacterId = new Map(lignesCollection.map((c) => [c.character_id, c]));
 
+  // Un seul aller-retour pour l'équipement de TOUS les persos possédés (pas un par perso) :
+  // c'est ce qui manquait aux PV/Attack affichés ici, jamais mis à jour par un objet équipé
+  // (le combat, lui, le comptait bien — voir equipementDuPerso dans combat-api.ts).
+  const objets = await lireObjets(playerId, config);
+  const equipementParCollectionId = new Map<number, ObjetEquipement[]>();
+  for (const o of objets) {
+    if (o.collection_id === null) continue;
+    const liste = equipementParCollectionId.get(o.collection_id) ?? [];
+    liste.push(o);
+    equipementParCollectionId.set(o.collection_id, liste);
+  }
+
   return lignesCharacters.map((l) => {
     const ligneCollection = collectionParCharacterId.get(l.id);
     const image_menu_url = l.image_menu ? urlPublique(`${l.sprite_folder}/${l.image_menu}`) : null;
@@ -80,7 +94,7 @@ export async function listerCollection(playerId: string): Promise<CarteCollectio
 
     const perso = chargerPerso(l);
     const niveauTier = Math.min(3, Math.max(1, ligneCollection.niveau)) as Niveau;
-    const stats = calculerStats(perso, niveauTier, config);
+    const stats = calculerStats(perso, niveauTier, config, equipementParCollectionId.get(ligneCollection.id));
 
     return {
       character_id: l.id, nom: l.nom, classe: l.classe, rarete: l.rarete,
