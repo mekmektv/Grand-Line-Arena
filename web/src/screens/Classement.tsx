@@ -62,6 +62,12 @@ export function Classement({ classement, onOuvrirFiche }: { classement: Classeme
                 WANTED
               </div>
             )}
+            {/* §8bis : les voisins de classement du joueur, à défier. Coin opposé au WANTED. */}
+            {row.rival && (
+              <div style={{ position: 'absolute', top: -7, right: 8, background: '#1a1208', color: 'var(--or)', font: '800 8px Rubik,Arial', letterSpacing: 1, padding: '1px 6px', borderRadius: 2, border: '1px solid #8a2f1f' }}>
+                ⚔️ RIVAL
+              </div>
+            )}
             <div style={{ width: 26, font: '900 14px Rubik,Arial', color: row.rang === 1 ? '#8a2f1f' : '#1a1208' }}>#{row.rang}</div>
             <PortraitJoueur url={row.avatar_url} pseudo={row.pseudo} />
             <div style={{ flex: 1, minWidth: 0 }}>

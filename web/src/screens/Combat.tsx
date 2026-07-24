@@ -977,6 +977,20 @@ export function Combat({
             >
               {resultat.vainqueur === 'a' ? gauche.nom : droite.nom} GAGNE
             </div>
+            {/* §8bis : un duel amical ne rapporte rien — au lieu du récap de gains, on affiche le
+                bilan des confrontations (la brique du système de rivaux) et une note. */}
+            {combat.amical ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', animation: 'fadeMonte .35s ease-out .35s both' }}>
+                <div style={{ font: '900 14px Rubik,Arial' }}>
+                  <span style={{ color: '#5fbf4d' }}>{combat.confrontation?.victoires ?? 0} V</span>
+                  <span style={{ color: '#e9d9b0', font: '700 10px Rubik,Arial', margin: '0 8px' }}>face à {combat.adversaire.pseudo}</span>
+                  <span style={{ color: '#ff7a5c' }}>{combat.confrontation?.defaites ?? 0} D</span>
+                </div>
+                <div style={{ font: '700 10px Rubik,Arial', color: 'rgba(233,217,176,.7)', textAlign: 'center', maxWidth: 240, lineHeight: 1.4 }}>
+                  Duel amical — aucun gain, mais l'honneur est sauf.
+                </div>
+              </div>
+            ) : combat.gains && (<>
             <div style={{ font: '800 15px Rubik,Arial', color: combat.gains.berrys >= 20 ? '#5fbf4d' : '#e9d9b0', animation: 'fadeMonte .35s ease-out .35s both' }}>
               +{combat.gains.berrys} <Berry size={14} /> ({combat.gains.berrys_total} total) · {combat.gains.energie_restante} combats restants
             </div>
@@ -1028,6 +1042,7 @@ export function Combat({
                 ⬆ NIVEAU {combat.gains.xp.niveau_apres} ATTEINT !
               </div>
             )}
+            </>)}
             <div style={{ display: 'flex', gap: 12 }}>
               <button
                 onClick={onRetour}
@@ -1037,7 +1052,8 @@ export function Combat({
               </button>
               <button
                 onClick={onRejouer}
-                disabled={combat.gains.energie_restante <= 0}
+                // Un duel amical ne coûte pas d'énergie : REJOUER n'y est jamais désactivé.
+                disabled={!!combat.gains && combat.gains.energie_restante <= 0}
                 style={{ font: '400 16px Bangers,Rubik', letterSpacing: 1, background: 'var(--rose)', color: '#fff', border: '3px solid #000', borderRadius: 12, padding: '12px 20px', boxShadow: '0 4px 0 #000' }}
               >
                 REJOUER

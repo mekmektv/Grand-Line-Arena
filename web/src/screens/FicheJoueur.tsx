@@ -21,7 +21,15 @@ function Badges({ classe, rarete }: { classe: string; rarete: string }) {
 
 // §8 point 7 : fiche joueur détaillée, ouverte depuis une ligne du classement — palmarès
 // (5 derniers combats), perso actuellement joué, perso favori (le plus utilisé, §22/07/2026).
-export function FicheJoueur({ fiche, onRetour }: { fiche: FicheJoueurData; onRetour: () => void }) {
+// §8bis : sur la fiche d'un AUTRE joueur, un bouton « Défier » lance un duel amical sans enjeu.
+export function FicheJoueur({ fiche, enCours, erreur, onDefier, onRetour }: {
+  fiche: FicheJoueurData;
+  enCours: boolean;
+  erreur: string;
+  onDefier: () => void;
+  onRetour: () => void;
+}) {
+  const { victoires, defaites } = fiche.confrontation;
   return (
     <div style={{
       minHeight: '100%', backgroundColor: '#c9a267',
@@ -56,6 +64,36 @@ export function FicheJoueur({ fiche, onRetour }: { fiche: FicheJoueurData; onRet
             </div>
           </div>
         </div>
+
+        {/* §8bis : défi. Absent sur sa propre fiche (on ne se défie pas soi-même). */}
+        {!fiche.est_moi && (
+          <div style={{ background: '#e9d9b0', border: '3px solid #1a1208', borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Le bilan des confrontations : la brique du « rival ». Affiché même à 0-0 pour
+                inviter au premier duel. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, font: '900 13px Rubik,Arial' }}>
+              <span style={{ color: '#3d8a4a' }}>{victoires} V</span>
+              <span style={{ color: '#5c4326', font: '700 10px Rubik,Arial' }}>face à lui</span>
+              <span style={{ color: '#8a2f1f' }}>{defaites} D</span>
+            </div>
+            <button
+              onClick={onDefier}
+              disabled={enCours}
+              style={{
+                font: '400 20px Bangers,Rubik', letterSpacing: 1, background: enCours ? '#7a5a3a' : '#8a2f1f',
+                color: 'var(--or)', border: '3px solid #1a1208', borderRadius: 10, padding: '10px 16px',
+                boxShadow: '0 4px 0 rgba(0,0,0,.35)', textShadow: '1px 1px 0 #1a1208',
+              }}
+            >
+              {enCours ? 'PRÉPARATION…' : '⚔️ DÉFIER'}
+            </button>
+            <div style={{ font: '700 10px Rubik,Arial', color: '#5c4326', textAlign: 'center', lineHeight: 1.4 }}>
+              Ce combat ne compte pas pour le classement et ne rapporte rien — montre-lui juste qui est le plus fort.
+            </div>
+            {erreur && (
+              <div style={{ font: '800 11px Rubik,Arial', color: '#8a2f1f', textAlign: 'center' }}>{erreur}</div>
+            )}
+          </div>
+        )}
 
         {/* Perso actuellement joué */}
         <div style={{ background: '#e9d9b0', border: '3px solid #1a1208', borderRadius: 8, padding: 14 }}>

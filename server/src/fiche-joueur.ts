@@ -7,6 +7,7 @@
 
 import { supabaseSelect, supabaseSelectUn } from './supabase.ts';
 import { lireClassement } from './classement.ts';
+import { lireHeadToHead, type HeadToHead } from './rivaux.ts';
 
 interface LigneJoueur { id: string; perso_actif_id: number | null; }
 interface LigneCollection { character_id: number; niveau: number; }
@@ -31,20 +32,31 @@ export interface LigneHistorique {
 }
 
 export interface FicheJoueur {
+  /** L'identifiant du joueur affiché — nécessaire au front pour lancer un duel (§8bis). */
+  id: string;
   pseudo: string;
   avatar_url: string | null;
   rang: number;
   prime: number;
+  /** true quand le demandeur regarde SA propre fiche : on n'y propose alors pas de duel. */
+  est_moi: boolean;
+  /** §8bis : bilan des confrontations entre le demandeur et ce joueur (0-0 sur sa propre fiche). */
+  confrontation: HeadToHead;
   perso_actif: FichePersoActif | null;
   /** null si le joueur n'a encore aucun combat joué (joueur_a_character_id toujours vide). */
   perso_favori: FichePersoFavori | null;
   historique: LigneHistorique[];
 }
 
-export async function lireFicheJoueur(playerId: string): Promise<FicheJoueur | null> {
-  const [classement, joueur] = await Promise.all([
-    lireClassement(playerId),
-    supabaseSelectUn<LigneJoueur>('players', { id: `eq.${playerId}`, select: 'id,perso_actif_id' }),
+// `cibleId` est le joueur affiché ; `viewerId` celui qui consulte — distincts pour calculer la
+// confrontation entre eux. Sur sa propre fiche, les deux sont égaux (est_moi).
+export async function lireFicheJoueur(cibleId: string, viewerId: string): Promise<FicheJoueur | null> {
+  const playerId = cibleId;
+  const estMoi = viewerId === cibleId;
+  const [classement, joueur, confrontation] = await Promise.all([
+    lireClassement(cibleId),
+    supabaseSelectUn<LigneJoueur>('players', { id: `eq.${cibleId}`, select: 'id,perso_actif_id' }),
+    estMoi ? Promise.resolve<HeadToHead>({ victoires: 0, defaites: 0 }) : lireHeadToHead(viewerId, cibleId),
   ]);
   if (!joueur) return null;
 
@@ -96,10 +108,13 @@ export async function lireFicheJoueur(playerId: string): Promise<FicheJoueur | n
   }));
 
   return {
+    id: cibleId,
     pseudo: classement.moi.pseudo,
     avatar_url: classement.moi.avatar_url,
     rang: classement.moi.rang,
     prime: classement.moi.prime,
+    est_moi: estMoi,
+    confrontation,
     perso_actif: persoActif,
     perso_favori: persoFavori,
     historique,

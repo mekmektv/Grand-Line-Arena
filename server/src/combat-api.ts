@@ -13,6 +13,7 @@ import { appliquerXpCombat, type GainXp } from './progression.ts';
 import { appliquerRecharges } from './recharge-api.ts';
 import { equipementDuPerso } from './equipement-api.ts';
 import { supabaseSelect, supabaseSelectUn, supabaseInsert, supabaseUpdate } from './supabase.ts';
+import { lireHeadToHead, type HeadToHead } from './rivaux.ts';
 import { construirePacketSprite, type PacketSprite, type LigneCharacterRendu } from './sprites.ts';
 import { urlPublique } from './assets.ts';
 import type { ResultatCombat } from './types.ts';
@@ -130,10 +131,13 @@ interface Adversaire {
 async function adversairesRecents(playerId: string, config: Config): Promise<Set<string>> {
   if (config.anti_repetition_combats <= 0) return new Set();
 
+  // §8bis : les duels amicaux (amical=true) sont exclus — ce ne sont pas de vrais combats de
+  // matchmaking, ils ne doivent pas influencer quel adversaire est servi ensuite.
   const derniers = await supabaseSelect<{ joueur_b: string | null; adversaire_bot_cle: string | null }>(
     'fights',
     {
       joueur_a: `eq.${playerId}`,
+      amical: 'eq.false',
       select: 'joueur_b,adversaire_bot_cle',
       order: 'date.desc',
       limit: String(config.anti_repetition_combats),
@@ -353,5 +357,113 @@ export async function lancerCombat(playerId: string): Promise<ResultatCombatComp
       berrys: gainBerrys, berrys_total: berrysTotal, energie_restante: energieRestante, xp,
       prime: prime.gain, prime_totale: prime.prime,
     },
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Duel amical (§8bis) — défier un joueur depuis le classement.
+//
+// C'est le MÊME combat PvP asynchrone que le matchmaking (on joue contre la photo de l'équipe
+// active de la cible), mais volontairement sans enjeu : aucune énergie dépensée, aucun Berry,
+// aucune XP, aucune prime, et le combat est écrit `amical=true` pour rester invisible du
+// matchmaking (§4bis) tout en nourrissant le head-to-head du système de rivaux. Le moteur
+// (combat.ts) et le rendu sont partagés à l'identique avec lancerCombat().
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Comme ResultatCombatComplet mais sans `gains` (un duel ne rapporte rien), avec le bilan des
+ *  confrontations mis à jour à afficher à la fin. */
+export interface ResultatDuel {
+  resultat: ResultatCombat;
+  spritesA: SpritesCombattant;
+  spritesB: SpritesCombattant;
+  adversaire: AdversaireAffiche;
+  moi: { pseudo: string; niveau: Niveau; rarete: string };
+  avantage: { camp: 'a' | 'b'; multiplicateur: number } | null;
+  amical: true;
+  confrontation: HeadToHead;
+}
+
+interface LigneJoueurDuel { id: string; pseudo: string; perso_actif_id: number | null; }
+
+export async function duelAmical(playerId: string, cibleId: string): Promise<ResultatDuel> {
+  if (playerId === cibleId) throw new Error('On ne peut pas se défier soi-même.');
+
+  const [joueur, cible, lignesConfig] = await Promise.all([
+    supabaseSelectUn<LigneJoueurDuel>('players', { id: `eq.${playerId}`, select: 'id,pseudo,perso_actif_id' }),
+    supabaseSelectUn<LigneJoueurDuel>('players', { id: `eq.${cibleId}`, select: 'id,pseudo,perso_actif_id' }),
+    supabaseSelect('config', { select: 'cle,valeur' }),
+  ]);
+  if (!joueur) throw new Error('Joueur introuvable.');
+  if (joueur.perso_actif_id === null) throw new Error('Aucun perso actif — va d\'abord en incarner un.');
+  if (!cible) throw new Error('Adversaire introuvable.');
+  if (cible.perso_actif_id === null) throw new Error('Cet adversaire n\'a pas encore de perso à défier.');
+
+  const config = chargerConfig(lignesConfig as { cle: string; valeur: unknown }[]);
+
+  const [collA, collB] = await Promise.all([
+    supabaseSelectUn<{ character_id: number; niveau: number }>(
+      'collection', { id: `eq.${joueur.perso_actif_id}`, select: 'character_id,niveau' },
+    ),
+    supabaseSelectUn<{ character_id: number; niveau: number }>(
+      'collection', { id: `eq.${cible.perso_actif_id}`, select: 'character_id,niveau' },
+    ),
+  ]);
+  if (!collA) throw new Error('Perso actif introuvable dans la collection.');
+  if (!collB) throw new Error('Perso de l\'adversaire introuvable.');
+
+  const niveauA = clampNiveau(collA.niveau);
+  const niveauB = clampNiveau(collB.niveau);
+  const ligneA = await chargerLigneCharacter(collA.character_id);
+  const ligneB = await chargerLigneCharacter(collB.character_id);
+  const persoA = chargerPerso(ligneA);
+  const persoB = chargerPerso(ligneB);
+
+  // §4ter : chacun combat avec l'équipement soudé à SON perso — la cible étant un vrai joueur,
+  // elle peut en porter (contrairement à un bot).
+  const [equipementA, equipementB] = await Promise.all([
+    equipementDuPerso(joueur.perso_actif_id, config),
+    equipementDuPerso(cible.perso_actif_id, config),
+  ]);
+
+  const resultat = simulerCombat(
+    { perso: persoA, niveau: niveauA, equipement: equipementA },
+    { perso: persoB, niveau: niveauB, equipement: equipementB },
+    config,
+  );
+
+  const gagne = resultat.vainqueur === 'a';
+  const vainqueurId = gagne ? playerId : cibleId;
+
+  // Écrit dans `fights` comme un vrai combat, mais SANS aucune mise à jour de `players` ni de
+  // `collection` : le duel ne touche ni Berrys, ni énergie, ni XP, ni prime, ni série de défaites.
+  await supabaseInsert('fights', {
+    joueur_a: playerId,
+    joueur_b: cibleId,
+    vainqueur: vainqueurId,
+    log: resultat.evenements,
+    adversaire_character_id: collB.character_id,
+    adversaire_pseudo: cible.pseudo,
+    adversaire_bot_cle: null,
+    joueur_a_character_id: collA.character_id,
+    amical: true,
+  });
+
+  // Le bilan est relu APRÈS l'insertion pour que ce duel y soit déjà compté.
+  const confrontation = await lireHeadToHead(playerId, cibleId);
+
+  const [spritesA, spritesB] = await Promise.all([
+    construirePaquetPourPerso(ligneA),
+    construirePaquetPourPerso(ligneB),
+  ]);
+
+  return {
+    resultat,
+    spritesA,
+    spritesB,
+    adversaire: { pseudo: cible.pseudo, niveau: niveauB, rarete: ligneB.rarete },
+    moi: { pseudo: joueur.pseudo, niveau: niveauA, rarete: ligneA.rarete },
+    avantage: calculerAvantage(persoA.classe, persoB.classe, config),
+    amical: true,
+    confrontation,
   };
 }

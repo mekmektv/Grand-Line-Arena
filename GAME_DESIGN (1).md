@@ -371,6 +371,46 @@ jour où l'écart deviendra décourageant.
 
 ---
 
+## 4quinquies. DUEL AMICAL & RIVAUX *(ajouté le 24/07/2026)*
+
+Une porte d'entrée sociale au classement, sans toucher à l'économie.
+
+**Duel amical** — depuis la fiche détaillée d'un joueur (ouverte au classement), un bouton
+**« Défier »** lance un combat contre lui. C'est le **même combat PvP asynchrone** que le
+matchmaking (on joue contre la photo de son équipe active, il ne subit rien, aucune notification),
+mais **volontairement sans enjeu** :
+
+- **Aucun coût, aucune limite** — pas d'énergie dépensée. On surveillera l'abus avant d'ajouter
+  un frein ; rien à farmer puisque ça ne rapporte rien.
+- **Aucun gain** — ni Berrys, ni XP, ni prime. Le message sous le bouton le dit : *« Ce combat ne
+  compte pas pour le classement et ne rapporte rien — montre-lui juste qui est le plus fort. »*
+- Le combat est écrit dans `fights` avec la colonne **`amical = true`** : il **nourrit le
+  head-to-head** (voir Rivaux) mais reste **invisible** pour l'anti-répétition du matchmaking
+  (§4bis) et pour la prime (§4quater). Sans ce marqueur, impossible de séparer un duel pour
+  l'honneur d'un vrai combat — d'où une vraie colonne plutôt qu'une déduction.
+
+**Head-to-head** — le bilan des confrontations entre deux joueurs (« 3 V – 1 D »), lu **en direct
+dans `fights`** (aucun compteur en base, comme les quêtes). **Tout compris** : duels amicaux ET
+combats de matchmaking, dans les deux sens de la rencontre. Affiché sur la fiche du joueur et à la
+fin d'un duel.
+
+**Rivaux** — deux joueurs désignés **automatiquement** comme cibles à dépasser : le **voisin
+au-dessus** et le **voisin en dessous** au classement. Aux extrémités on complète par l'autre côté
+(1er → 2e et 3e ; dernier → les deux au-dessus). Marqués d'une **étiquette « ⚔️ RIVAL »** sur leur
+ligne du classement. Calcul dans `server/src/rivaux.ts` (`idsRivaux`, pur). **Aucune récompense**
+à battre son rival : c'est un objectif d'affichage, pas une mécanique — cohérent avec le duel qui
+ne rapporte rien. Bénéfice de côté : ça donne à chacun une cible *relative* atteignable, ce qui
+adoucit la limite « les anciens sont intouchables » du §4quater sans réinitialiser la prime.
+
+**Route :** `POST /duel { cible }`. Logique dans `duelAmical()` (`combat-api.ts`), qui partage le
+moteur et le rendu avec `lancerCombat()` mais n'écrit **aucune** mise à jour de `players`/
+`collection`.
+
+⚠️ **Colonne `fights.amical`** à appliquer en base (`supabase/A_APPLIQUER_duel_amical.sql`) —
+sans elle, l'anti-répétition (qui filtre `amical = false`) et l'insertion du duel plantent.
+
+---
+
 ## 4ter. ÉQUIPEMENT *(validé le 15/07/2026)*
 
 - **Pas d'affichage visuel** sur le sprite : l'équipement ne donne que des stats, aucun asset à produire.

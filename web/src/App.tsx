@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  recupererEtat, recupererCollection, recupererClassement, changerPersoActif, lancerCombat,
+  recupererEtat, recupererCollection, recupererClassement, changerPersoActif, lancerCombat, lancerDuel,
   recupererQuetes, reclamerQuete, recupererEquipement, avancerOnboarding, encaisserPresence,
   recupererFicheJoueur,
   ETAPE_PREMIER_TIRAGE, ETAPE_TUTO_ACCUEIL, ETAPE_COFFRE_OFFERT,
@@ -48,6 +48,9 @@ function App() {
   const [quetesOuvertes, setQuetesOuvertes] = useState(false);
   const [lancementCombatEnCours, setLancementCombatEnCours] = useState(false);
   const [erreurCombat, setErreurCombat] = useState('');
+  // §8bis : la cible du dernier duel, pour que le bouton REJOUER relance contre le même joueur.
+  const [duelCibleId, setDuelCibleId] = useState<string | null>(null);
+  const [erreurDuel, setErreurDuel] = useState('');
   const [erreurIncarner, setErreurIncarner] = useState('');
   const [avisLienTwitch, setAvisLienTwitch] = useState('');
 
@@ -168,6 +171,25 @@ function App() {
     }
   };
 
+  // §8bis : défie un joueur depuis sa fiche. Même écran que le combat normal, mais sans enjeu —
+  // rien à rafraîchir ensuite (le duel ne touche ni Berrys, ni énergie, ni XP, ni prime).
+  const defier = async (cibleId: string) => {
+    debloquerSons();
+    setErreurDuel(''); setLancementCombatEnCours(true); setDuelCibleId(cibleId);
+    try {
+      const resultat = await lancerDuel(cibleId);
+      setCombat(resultat);
+      setFicheJoueurOuverte(null);
+    } catch (e) {
+      setErreurDuel((e as Error).message);
+    } finally {
+      setLancementCombatEnCours(false);
+    }
+  };
+
+  // Un duel ne change rien côté serveur : quitter n'a qu'à fermer l'écran (pas de rafraîchissement).
+  const quitterDuel = () => { setCombat(null); setDuelCibleId(null); };
+
   // Un combat change la progression des quêtes (combats joués / gagnés) : on rafraîchit aussi.
   const quitterCombat = async () => {
     setCombat(null);
@@ -200,10 +222,16 @@ function App() {
 
   // §8 : le combat est plein écran, en dehors de la nav du bas — priorité d'affichage absolue.
   if (combat) {
+    // §8bis : un duel amical se quitte et se rejoue différemment d'un vrai combat — pas de
+    // rafraîchissement d'état, et REJOUER relance contre la même cible plutôt que le matchmaking.
+    const onRetour = combat.amical ? quitterDuel : quitterCombat;
+    const onRejouer = combat.amical
+      ? () => { setCombat(null); if (duelCibleId) defier(duelCibleId); }
+      : () => { setCombat(null); combattre(); };
     return (
       <div className="pc-stage">
         <div className="pc-frame">
-          <Combat combat={combat} onRetour={quitterCombat} onRejouer={() => { setCombat(null); combattre(); }} />
+          <Combat combat={combat} onRetour={onRetour} onRejouer={onRejouer} />
         </div>
       </div>
     );
@@ -272,7 +300,15 @@ function App() {
         />
       );
     } else if (ficheJoueurOuverte) {
-      contenu = <FicheJoueur fiche={ficheJoueurOuverte} onRetour={() => setFicheJoueurOuverte(null)} />;
+      contenu = (
+        <FicheJoueur
+          fiche={ficheJoueurOuverte}
+          enCours={lancementCombatEnCours}
+          erreur={erreurDuel}
+          onDefier={() => defier(ficheJoueurOuverte.id)}
+          onRetour={() => { setErreurDuel(''); setFicheJoueurOuverte(null); }}
+        />
+      );
     } else if (onglet === 'accueil') {
       contenu = (
         <>

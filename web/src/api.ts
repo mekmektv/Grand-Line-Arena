@@ -398,6 +398,8 @@ export interface LigneClassement {
   rang: number; pseudo: string; prime: number; moi: boolean;
   /** Photo de profil Twitch. null pour les comptes de dev, qui n'en ont pas. */
   avatar_url: string | null;
+  /** §8bis : true si ce joueur est un rival du demandeur (voisin de classement). */
+  rival: boolean;
 }
 export interface Classement { top: LigneClassement[]; moi: LigneClassement; }
 
@@ -407,12 +409,19 @@ export async function recupererClassement(): Promise<Classement> {
   return res.json();
 }
 
+export interface HeadToHead { victoires: number; defaites: number; }
+
 export interface FichePersoResume { nom: string; classe: string; rarete: string; }
 export interface FicheJoueur {
+  id: string;
   pseudo: string;
   avatar_url: string | null;
   rang: number;
   prime: number;
+  /** true sur sa propre fiche : pas de bouton défier dans ce cas. */
+  est_moi: boolean;
+  /** §8bis : bilan des confrontations entre le demandeur et ce joueur. */
+  confrontation: HeadToHead;
   perso_actif: (FichePersoResume & { niveau: number }) | null;
   perso_favori: (FichePersoResume & { combats: number }) | null;
   historique: {
@@ -499,16 +508,33 @@ export interface ResultatCombatComplet {
   moi: { pseudo: string; niveau: number; rarete: string };
   /** §2 : qui profite du triangle des classes. null si aucun des deux ne contre l'autre. */
   avantage: { camp: Camp; multiplicateur: number } | null;
-  gains: {
+  /** Absent pour un duel amical (§8bis), qui ne rapporte rien — voir `amical`. */
+  gains?: {
     berrys: number; berrys_total: number; energie_restante: number; xp: GainXp;
     /** §8 point 7 : 0 contre un bot ou en cas de défaite — la prime ne bouge alors pas. */
     prime: number; prime_totale: number;
   };
+  /** §8bis : true si c'est un duel amical (aucun gain, panneau de fin allégé). */
+  amical?: boolean;
+  /** §8bis : bilan des confrontations mis à jour, affiché à la fin d'un duel. */
+  confrontation?: HeadToHead;
 }
 
 export async function lancerCombat(): Promise<ResultatCombatComplet> {
   const res = await fetch(`${API_URL}/combat`, { method: 'POST', credentials: 'include' });
   const corps = await res.json();
   if (!res.ok) throw new Error(corps.erreur ?? `POST /combat → ${res.status}`);
+  return corps;
+}
+
+/** §8bis : défie un joueur depuis sa fiche. Même écran de combat, mais sans aucun enjeu. */
+export async function lancerDuel(cibleId: string): Promise<ResultatCombatComplet> {
+  const res = await fetch(`${API_URL}/duel`, {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cible: cibleId }),
+  });
+  const corps = await res.json();
+  if (!res.ok) throw new Error(corps.erreur ?? `POST /duel → ${res.status}`);
   return corps;
 }

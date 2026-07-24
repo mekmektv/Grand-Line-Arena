@@ -202,6 +202,27 @@ classement, fiche joueur détaillée au classement (§8 point 7).
   chaque combat (elle ne l'était pas : XP visible seulement après un rafraîchissement manuel,
   changer d'onglet par exemple).
 
+### Duel amical & rivaux (24/07/2026) — voir GAME_DESIGN §4quinquies
+
+Défier un joueur depuis sa fiche (au classement) → **duel amical** : même combat PvP asynchrone que
+le matchmaking, mais **sans aucun enjeu** (pas d'énergie, ni Berrys, ni XP, ni prime). Et deux
+**rivaux** auto = les voisins de classement, étiquetés au classement.
+
+- **C'est le même moteur.** `duelAmical()` (`combat-api.ts`) partage tout avec `lancerCombat()`
+  mais **n'écrit aucune** mise à jour `players`/`collection` — il n'insère qu'une ligne `fights`.
+  Route `POST /duel { cible }`. Le front réutilise l'écran `Combat` tel quel (panneau de fin
+  allégé quand `combat.amical`, `gains` devient optionnel côté `api.ts`).
+- ⚠️ **Colonne `fights.amical`** (`supabase/A_APPLIQUER_duel_amical.sql`) — **à appliquer AVANT
+  de déployer** : `adversairesRecents()` filtre désormais `amical=eq.false`, et un combat normal
+  **plante** si la colonne manque (PostgREST refuse le filtre sur une colonne inexistante). Piège
+  d'ordonnancement classique : ne pas pousser le code avant que l'utilisateur ait collé le SQL.
+- **Head-to-head** (« 3 V – 1 D ») lu en direct dans `fights`, **tout compris** (amical + normal,
+  deux sens) — `lireHeadToHead()` dans `rivaux.ts`, requête PostgREST `or=(and(...),and(...))`.
+- **Rivaux** = voisins de classement (`idsRivaux()`, pur, testé sur les cas limites). Aux
+  extrémités on complète par l'autre côté (1er → 2e+3e). Aucune récompense à les battre : label,
+  pas mécanique. `fiche-joueur.ts` reçoit désormais **deux ids** (cible + demandeur) pour calculer
+  la confrontation et `est_moi` (pas de bouton défier sur sa propre fiche).
+
 ### Connexion — deux chemins désormais (23/07/2026)
 
 Le login n'est plus "un seul bouton Twitch" (§8 point 1 du GAME_DESIGN est dépassé sur ce

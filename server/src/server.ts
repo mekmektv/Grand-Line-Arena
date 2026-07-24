@@ -31,6 +31,7 @@
 //   POST /equipement/equiper    → soude un objet sur un perso { equipement_id, collection_id }
 //   POST /equipement/recycler   → détruit un objet contre des Berrys { equipement_id }
 //   POST /combat                → lance un combat réel (§6/§7/§8)
+//   POST /duel                  → duel amical contre un joueur { cible } — sans enjeu (§8bis)
 //   POST /logout                → efface le cookie
 //
 // Lancer :  node server/src/server.ts   (après avoir rempli server/.env, voir README)
@@ -62,7 +63,7 @@ import {
 } from './onboarding.ts';
 import { lireClassement } from './classement.ts';
 import { lireFicheJoueur } from './fiche-joueur.ts';
-import { lancerCombat } from './combat-api.ts';
+import { lancerCombat, duelAmical } from './combat-api.ts';
 import { recyclerPerso } from './recyclage.ts';
 import { lireQuetes, reclamerQuete } from './quetes-api.ts';
 import {
@@ -701,7 +702,7 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
       const idCible = url.searchParams.get('id');
       if (!idCible) { res.writeHead(400).end(JSON.stringify({ erreur: 'id manquant' })); return; }
 
-      const fiche = await lireFicheJoueur(idCible);
+      const fiche = await lireFicheJoueur(idCible, playerId);
       if (!fiche) { res.writeHead(404).end(JSON.stringify({ erreur: 'joueur introuvable' })); return; }
 
       res.setHeader('Content-Type', 'application/json');
@@ -715,6 +716,24 @@ export async function gererRequete(req: IncomingMessage, res: ServerResponse): P
 
       try {
         const resultat = await lancerCombat(playerId);
+        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200).end(JSON.stringify(resultat));
+      } catch (e) {
+        res.writeHead(400).end(JSON.stringify({ erreur: (e as Error).message }));
+      }
+      return;
+    }
+
+    // §8bis : défier un joueur depuis le classement — duel amical, sans aucun enjeu.
+    if (url.pathname === '/duel' && req.method === 'POST') {
+      const playerId = lireCookieSession(cookies[NOM_COOKIE_SESSION]);
+      if (!playerId) { res.writeHead(401).end(JSON.stringify({ erreur: 'non connecté' })); return; }
+
+      const { cible } = await lireCorpsJSON<{ cible?: string }>(req);
+      if (!cible) { res.writeHead(400).end(JSON.stringify({ erreur: 'cible manquante' })); return; }
+
+      try {
+        const resultat = await duelAmical(playerId, cible);
         res.setHeader('Content-Type', 'application/json');
         res.writeHead(200).end(JSON.stringify(resultat));
       } catch (e) {
