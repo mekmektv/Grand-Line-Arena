@@ -35,11 +35,12 @@ const URL_EFFET: Record<NomEffet, string> = {
 // n'ont pas été enregistrés au même niveau. À réajuster à l'oreille si besoin.
 // Retour utilisateur du 23/07 : musique -30%, reste des sons -15%.
 // Retour utilisateur du 23/07 (2) : tous les effets (pas la musique) +10%.
+// Retour utilisateur du 24/07 : tous les effets (pas la musique) +15% de plus.
 const VOLUME_MAITRE = 0.55;
 const VOLUME_RELATIF: Record<NomEffet, number> = {
-  coup_normal: 0.8 * 0.85 * 1.1, coup_epee: 0.8 * 0.85 * 1.1, coup_projectile: 0.8 * 0.85 * 1.1, esquive: 0.7 * 0.85 * 1.1,
-  critique: 1 * 0.85 * 1.1, victoire: 0.9 * 0.85 * 1.1, defaite: 0.9 * 0.85 * 1.1, special: 0.85 * 0.85 * 1.1, transformation: 0.9 * 0.85 * 1.1,
-  clash: 1 * 0.85 * 1.1,
+  coup_normal: 0.8 * 0.85 * 1.1 * 1.15, coup_epee: 0.8 * 0.85 * 1.1 * 1.15, coup_projectile: 0.8 * 0.85 * 1.1 * 1.15, esquive: 0.7 * 0.85 * 1.1 * 1.15,
+  critique: 1 * 0.85 * 1.1 * 1.15, victoire: 0.9 * 0.85 * 1.1 * 1.15, defaite: 0.9 * 0.85 * 1.1 * 1.15, special: 0.85 * 0.85 * 1.1 * 1.15, transformation: 0.9 * 0.85 * 1.1 * 1.15,
+  clash: 1 * 0.85 * 1.1 * 1.15,
 };
 const VOLUME_MUSIQUE = VOLUME_MAITRE * 0.5 * 0.7;
 
@@ -104,7 +105,7 @@ export function debloquerSons() {
   if (contexte && contexte.state === 'suspended') contexte.resume().catch(() => {});
 }
 
-export function jouerEffet(nom: NomEffet) {
+function jouerBuffer(nom: NomEffet) {
   if (!contexte) return;
   const buffer = buffers[nom];
   // Pas encore décodé (ou fichier manquant) : le clash ne doit jamais bloquer
@@ -118,6 +119,19 @@ export function jouerEffet(nom: NomEffet) {
   source.connect(gain).connect(contexte.destination);
   source.start(0);
   if (nom === 'clash') source.onended = () => demarrerMusique();
+}
+
+export function jouerEffet(nom: NomEffet) {
+  if (!contexte) return;
+  // Le clash sonne dès le montage de l'écran VS (Combat.tsx), quelques
+  // instants seulement après debloquerSons() côté App.tsx : sa promesse de
+  // resume() n'a pas forcément fini avant que ce premier son ne se déclenche.
+  // Un AudioBufferSourceNode démarré pendant que le contexte est encore
+  // suspendu ne joue pas (contrairement à un <audio>.play(), qui lui se
+  // contentait d'attendre) — d'où le clash muet alors que tout le reste,
+  // déclenché bien plus tard dans le combat, avait largement le temps.
+  if (contexte.state !== 'running') { contexte.resume().then(() => jouerBuffer(nom)).catch(() => {}); return; }
+  jouerBuffer(nom);
 }
 
 /** Joue le clash d'ouverture (écran VS), puis enchaîne sur la musique de combat
