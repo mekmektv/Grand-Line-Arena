@@ -68,6 +68,19 @@ puis relire dans un second appel — un seul appel long dépasse le délai d'att
 Trois correctifs ont été tentés à l'aveugle ici, dont un a créé un nouveau bug ; c'est le log de
 build fourni par l'utilisateur qui a débloqué la situation.
 
+**Sons de combat : PC ≠ téléphone, deux pièges empilés (24/07/2026).** Voir détail plus bas
+(§ Sons). Retenir la leçon générale : un bug audio qui "marche sur PC mais pas sur mobile" (ou
+"marche mais en retard") n'est presque jamais le fichier son lui-même — c'est le mécanisme de
+déblocage/démarrage du son qui diffère entre desktop et mobile. Tester au son réel sur téléphone,
+pas seulement au typecheck + absence d'erreur console.
+
+**Toute vue qui affiche PV/Attack doit inclure l'équipement.** `calculerStats()` a un 4ᵉ
+paramètre optionnel (`equipement`) : l'oublier ne plante rien, ça affiche juste des stats fausses
+en silence. Piège déjà tombé deux fois sur le même bug (Accueil et fiche perso l'oubliaient tous
+les deux, corrigé le 24/07) — le combat, lui, l'a toujours eu via `equipementDuPerso()`. Avant
+d'ajouter un nouvel endroit qui affiche PV/Attack, vérifier qu'il passe bien l'équipement du
+perso à `calculerStats()`.
+
 ---
 
 ## Lancer le projet
@@ -163,13 +176,31 @@ qui lisent le seed, pas la base — se sont mis à planter. Une base recréée a
 
 ---
 
-## État au 23/07/2026
+## État au 24/07/2026
 
 **Le jeu est en ligne et jouable, sous le nom Grand Line Arena** (renommé le 23/07 — l'ancien
 nom "One Piece Arena" ne doit plus apparaître nulle part, code compris). Base + config, moteur
 de combat, gacha, tous les écrans, combat animé, XP des persos, recharge d'énergie, matchmaking
 complet (§4bis), recyclage, quêtes, équipement, onboarding joué par le joueur, prime au
 classement, fiche joueur détaillée au classement (§8 point 7).
+
+### Petits retours utilisateur du 24/07/2026
+
+- **Vitesse de combat** : bouton VITESSE cycle ×1 → ×2 → ×3 (au lieu de ×1/×2 seulement).
+- **Écran VS** : le pseudo de l'adversaire s'affiche seul (plus de "le pirate de X", qui
+  débordait avec les pseudos longs) ; le contour du portrait suit la **rareté**
+  (`COULEUR_RARETE`), pas la classe — la couleur de classe reste utilisée pour le badge de
+  classe et le dégradé de fond, ce sont deux informations différentes à ne pas mélanger.
+- **Tableau des primes** : phrase d'explication sous le titre (comment on monte au classement).
+- **Tirage** : bouton "ENCORE" renommé "RETOUR" ; le message sous INCARNER reflète le vrai coût
+  du prochain changement de perso (`etat.prochain_changement_cout`) au lieu d'annoncer à tort
+  que c'est toujours gratuit.
+- **Fiche perso** : la barre d'XP et le seuil du niveau suivant étaient un reliquat de l'écran
+  d'avant que le combat soit jouable — toujours à 0 % avec un message statique, alors que le
+  serveur calculait déjà `progression_pct`/`xp_avant_prochain_niveau`, juste jamais branché côté
+  affichage. Corrigé, et `quitterCombat()` (App.tsx) recharge maintenant la collection après
+  chaque combat (elle ne l'était pas : XP visible seulement après un rafraîchissement manuel,
+  changer d'onglet par exemple).
 
 ### Connexion — deux chemins désormais (23/07/2026)
 
@@ -230,9 +261,6 @@ préviendra quand l'attaquer. Pas encore testé en conditions réelles (prochain
 
 ### Reste à faire
 
-- **Son Esquive** — seul son de la liste du 22/07 encore manquant. Le code l'appelle déjà
-  (`jouerEffet('esquive')` dans `Combat.tsx`) : il suffira de déposer `esquive.mp3` dans
-  `web/public/sons/` pour qu'il fonctionne, aucun code à retoucher.
 - **Saisons de prime** — la prime est cumulative, donc les anciens sont mécaniquement
   intouchables. Sans effet à 3 joueurs, mordra quand des viewers arriveront en cours de route.
 - **Quête « ouvrir 1 coffre »** — retirée du catalogue faute d'un compteur de coffres ouverts
@@ -242,19 +270,34 @@ préviendra quand l'attaquer. Pas encore testé en conditions réelles (prochain
 
 ### Décisions structurantes à connaître
 
-**Sons (branchés le 23/07).** Module dédié `web/src/sons.ts` (un seul `<audio>` réutilisé par
-effet, jamais recréé à chaque coup). Rien n'est codé en dur par personnage : le choix du son
-suit des propriétés déjà présentes dans les données (classe `Sabreur` → épée, animation de
-projectile présente → projectile, `categorie` du spécial → spécial/transformation) — un nouveau
-perso hérite automatiquement des bons sons sans toucher au code, tant que sa classe et la
-catégorie de son spécial sont correctement renseignées.
-- **Ouverture** : `clash` sonne dès l'écran VS (les 2 comptes qui s'affrontent), et la musique de
-  combat démarre juste après — enchaînement piloté par l'événement `ended` du clash, **pas une
-  durée fixe devinée**. Si `clash.mp3` venait à manquer, un filet de sécurité (`error`/`ended`)
-  démarre la musique quand même : un clash absent ne doit jamais couper toute la musique.
-- **Musique** : boucle qui saute les 20 premières secondes du fichier à **chaque** reprise de
-  boucle (pas seulement au premier lancement) — géré manuellement (`ended` + `currentTime`), pas
-  via l'attribut `loop` natif qui repartirait de 0.
+**Sons (branchés le 23/07, effets passés en Web Audio le 24/07).** Module dédié `web/src/sons.ts`.
+Rien n'est codé en dur par personnage : le choix du son suit des propriétés déjà présentes dans
+les données (classe `Sabreur` → épée, animation de projectile présente → projectile, `categorie`
+du spécial → spécial/transformation) — un nouveau perso hérite automatiquement des bons sons sans
+toucher au code, tant que sa classe et la catégorie de son spécial sont correctement renseignées.
+
+⚠️ **Les EFFETS (coups, crit, spécial, clash…) utilisent la Web Audio API, pas `<audio>`** —
+buffers décodés d'avance (`fetch` + `decodeAudioData` au chargement du module), joués via
+`AudioBufferSourceNode`. Raison, trouvée en deux temps le 24/07 sur retour utilisateur :
+1. Un `<audio>.play()` a un temps de démarrage perceptible sur mobile (invisible sur PC) : ça
+   décalait TOUS les sons de combat par rapport à l'impact à l'écran, de façon constante sur tout
+   le combat. `AudioBufferSourceNode` démarre quasi instantanément, ça règle le décalage.
+2. Un `AudioContext` démarre **suspendu** tant qu'un geste utilisateur ne l'a pas débloqué —
+   `debloquerSons()` appelle `contexte.resume()` en tout premier dans `combattre()` (App.tsx),
+   de façon SYNCHRONE avant le premier `await`, sinon ce n'est plus dans le geste. Piège restant
+   même après ce fix : le clash sonne dès le montage de l'écran VS, potentiellement AVANT que la
+   promesse de `resume()` soit tenue (contrairement à un vieux `<audio>.play()` qui attendait
+   tout seul, un `source.start()` programmé pendant que le contexte est encore suspendu ne joue
+   simplement pas — silencieux, sans erreur). `jouerEffet()` vérifie donc `contexte.state` et
+   attend la reprise avant de programmer la lecture si besoin, sans ralentir les sons suivants
+   (le cas courant, contexte déjà prêt à ce moment-là).
+- La **musique** reste un `<audio>` classique (boucle en streaming, pas un effet synchronisé à
+  une frame précise, la latence de démarrage n'y change rien) : elle saute les 20 premières
+  secondes du fichier à **chaque** reprise de boucle (pas seulement au premier lancement) — géré
+  manuellement (`ended` + `currentTime`), pas via l'attribut `loop` natif qui repartirait de 0.
+- **Ouverture** : `clash` sonne dès l'écran VS, et la musique démarre juste après — enchaînement
+  piloté par `onended` du buffer du clash, **pas une durée fixe devinée**. Si le buffer n'est pas
+  encore décodé, la musique démarre quand même (un clash absent ne doit jamais couper la musique).
 - **Impact** : coup normal / épée (classe `Sabreur`) / projectile — son joué à l'IMPACT, pas au
   lancer. Le critique **remplace** le son de coup, il ne s'y ajoute pas. Les spéciaux à
   projectile (Sniper) jouent aussi le son `coup_projectile` à l'impact.
@@ -263,10 +306,14 @@ catégorie de son spécial sont correctement renseignées.
   23/07 : un buff, visuellement, se lit comme une transfo — même son que la vraie transfo).
 - **KO retiré** (retour utilisateur : "il est nul"), victoire/défaite suffisent.
 - **Mute** : bouton 🔊/🔇 sur l'écran de combat, à côté de VITESSE. Coupe le son sans jamais
-  mettre en pause — les effets continuent de se déclencher muets, donc aucune désynchro possible
-  avec l'animation. Préférence retenue en `localStorage` (`gla_sons_muets`).
-- Volumes uniformisés à l'oreille par l'utilisateur le 23/07 : musique -30 %, reste des sons
-  -15 %, réglages dans `VOLUME_MAITRE`/`VOLUME_RELATIF` de `sons.ts`.
+  mettre en pause — les effets continuent de se déclencher à volume 0 (gain à 0 en Web Audio),
+  donc aucune désynchro possible avec l'animation. Préférence retenue en `localStorage`
+  (`gla_sons_muets`).
+- Volumes réajustés à l'oreille par l'utilisateur plusieurs fois (23-24/07) : musique -30 % une
+  fois pour toutes, effets remontés par étapes cumulatives (+10 %, +15 %, +10 % de plus), et
+  `coup_normal` (attaque de base au corps à corps) +25 % en plus de ça, nettement plus faible que
+  les autres sons. Réglages dans `VOLUME_MAITRE`/`VOLUME_RELATIF` de `sons.ts` — à réajuster à
+  l'oreille si un nouveau retour arrive, pas à deviner.
 
 **Onboarding (refait le 21/07).** Le compte se crée **vide**. Les deux tirages du §4 sont joués
 par le joueur : roll forcé Commun à la connexion, puis coffre offert après le premier combat.
