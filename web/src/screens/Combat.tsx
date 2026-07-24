@@ -11,7 +11,7 @@ import type { NomEffet } from '../sons';
 // ici le canvas ne fait QUE rejouer une liste déjà calculée par le serveur (§6).
 //
 // Constantes de rendu reprises À L'IDENTIQUE du testeur / §7 GAME_DESIGN.md :
-//   échelle (H*0.30)/ref*taille · sol GY=H*0.86 · CAST_MS=1100
+//   échelle (H*0.30)/ref*taille · sol GY=H*0.78 (remonté de 0.86 le 24/07, voir fit()) · CAST_MS=1100
 //   projectile: largeur H*0.22*taille, y=GY-H*(0.05+hauteur*0.40), durée=1300-vitesse*105
 //   effet: x=perso+face*(efX*bodyH*0.5), y=GY-bodyH*0.5-(efY*bodyH*0.5)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -278,7 +278,11 @@ export function Combat({
       DPR = window.devicePixelRatio || 1;
       canvas.width = r.width * DPR; canvas.height = r.height * DPR;
       W = r.width; H = r.height;
-      GY = H * 0.86;
+      // Ligne de sol (pieds des persos), à 78 % de la hauteur. Remontée de 86 % → 78 % le
+      // 24/07 : au ras du bas, les persos se noyaient dans le dallage sombre + le voile ; à 78 %
+      // ils sont sur la zone éclairée du décor, bien plus lisibles (retour utilisateur). Tout le
+      // plan d'action (ombres, projectiles, popups, pose de victoire) est relatif à GY et suit.
+      GY = H * 0.78;
       // §7 : l'arène du testeur est en 16/10 (large), la nôtre en 3/4 (portrait, §8 combat
       // plein écran). Encore trop proches à 0.26/0.74 + échelle 0.22 : on réduit encore la
       // taille des persos (0.16) ET on les écarte beaucoup plus (0.16/0.84) — l'écart visuel
